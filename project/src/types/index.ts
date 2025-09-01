@@ -54,3 +54,58 @@ export interface AuthForm {
   phone?: string;
   confirmPassword?: string;
 }
+
+// Admin-specific types
+export interface AdminCategory {
+  id_categorie: number;
+  nom: string;
+}
+
+export interface AdminBrand {
+  id_marque: number;
+  nom: string;
+}
+
+export interface AdminProduct {
+  id_produit: number;
+  nom: string;
+  description: string;
+  prix: number;
+  stock: number;
+  qr_code_path?: string;
+  date_creation: string;
+  reste: number;
+  id_categorie: number;
+  id_marque: number;
+}
+
+export interface AdminOrder {
+  id_commande: number;
+  quantite: number;
+  prix: number;
+  prix_total: number;
+  date_creation: string;
+  statut: 'Pending' | 'Completed' | 'Canceled';
+  produits: {
+    id_produit: number;
+    quantite: number;
+  }[];
+}
+
+export interface AdminCart {
+  id_panier: number;
+  date_creation: string;
+  products: {
+    product: AdminProduct;
+    quantity: number;
+  }[];
+}
+
+export interface DashboardStats {
+  totalCategories: number;
+  totalBrands: number;
+  totalProducts: number;
+  totalUsers: number;
+  totalOrders: number;
+  totalRevenue: number;
+}
