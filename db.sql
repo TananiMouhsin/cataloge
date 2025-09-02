@@ -1,226 +1,124 @@
 /*==============================================================*/
-/* Nom de SGBD :  Sybase SQL Anywhere 11                        */
-/* Date de création :  01/09/2025 12:00:49                      */
+/* Base de données Catalogue Digital - Compatible MySQL          */
 /*==============================================================*/
 
-if exists(select 1 from sys.sysforeignkey where role='FK_COMMANDE_COMMANDE_PRODUIT') then
-    alter table Commande
-       delete foreign key FK_COMMANDE_COMMANDE_PRODUIT
-end if;
+-- =====================
+-- Suppression des tables (les contraintes sont supprimées automatiquement)
+-- =====================
+DROP TABLE IF EXISTS Stocker;
+DROP TABLE IF EXISTS Commande;
+DROP TABLE IF EXISTS Panier;
+DROP TABLE IF EXISTS Produit;
+DROP TABLE IF EXISTS Marque;
+DROP TABLE IF EXISTS Categorie;
+DROP TABLE IF EXISTS Utilisateurs;
 
-if exists(select 1 from sys.sysforeignkey where role='FK_COMMANDE_COMMANDE2_UTILISAT') then
-    alter table Commande
-       delete foreign key FK_COMMANDE_COMMANDE2_UTILISAT
-end if;
+-- =====================
+-- Création des tables
+-- =====================
 
-if exists(select 1 from sys.sysforeignkey where role='FK_PANIER_AVOIR_UTILISAT') then
-    alter table Panier
-       delete foreign key FK_PANIER_AVOIR_UTILISAT
-end if;
+/* Table : Categorie */
+CREATE TABLE Categorie (
+   id_categorie INT NOT NULL AUTO_INCREMENT,
+   nom          VARCHAR(50),
+   CONSTRAINT PK_CATEGORIE PRIMARY KEY (id_categorie)
+) ENGINE=InnoDB;
 
-if exists(select 1 from sys.sysforeignkey where role='FK_PRODUIT_FABRIQUE_MARQUE') then
-    alter table Produit
-       delete foreign key FK_PRODUIT_FABRIQUE_MARQUE
-end if;
+/* Table : Utilisateurs */
+CREATE TABLE Utilisateurs (
+   id_users      INT NOT NULL AUTO_INCREMENT,
+   nom           VARCHAR(50),
+   email         VARCHAR(100),
+   mdp_hash      VARCHAR(255),
+   date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   role          ENUM('admin','client') DEFAULT 'client',
+   CONSTRAINT PK_UTILISATEURS PRIMARY KEY (id_users)
+) ENGINE=InnoDB;
 
-if exists(select 1 from sys.sysforeignkey where role='FK_PRODUIT_APPARTIEN_CATEGORI') then
-    alter table Produit
-       delete foreign key FK_PRODUIT_APPARTIEN_CATEGORI
-end if;
+/* Table : Marque */
+CREATE TABLE Marque (
+   id_marque INT NOT NULL AUTO_INCREMENT,
+   nom       VARCHAR(50),
+   CONSTRAINT PK_MARQUE PRIMARY KEY (id_marque)
+) ENGINE=InnoDB;
 
-if exists(select 1 from sys.sysforeignkey where role='FK_STOCKER_STOCKER_PRODUIT') then
-    alter table Stocker
-       delete foreign key FK_STOCKER_STOCKER_PRODUIT
-end if;
+/* Table : Produit */
+CREATE TABLE Produit (
+   id_produit   CHAR(10) NOT NULL,
+   id_categorie INT NOT NULL,
+   id_marque    INT NOT NULL,
+   nom          VARCHAR(100),
+   description  VARCHAR(255),
+   prix         DECIMAL(10,2),
+   stock        INT,
+   qr_code_path VARCHAR(255),
+   date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   reste        INT,
+   CONSTRAINT PK_PRODUIT PRIMARY KEY (id_produit)
+) ENGINE=InnoDB;
 
-if exists(select 1 from sys.sysforeignkey where role='FK_STOCKER_STOCKER2_PANIER') then
-    alter table Stocker
-       delete foreign key FK_STOCKER_STOCKER2_PANIER
-end if;
+/* Table : Panier */
+CREATE TABLE Panier (
+   id_panier     INT NOT NULL AUTO_INCREMENT,
+   id_users      INT NOT NULL,
+   date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   CONSTRAINT PK_PANIER PRIMARY KEY (id_panier)
+) ENGINE=InnoDB;
 
-if exists(
-   select 1 from sys.systable 
-   where table_name='Categorie'
-     and table_type in ('BASE', 'GBL TEMP')
-) then
-    drop table Categorie
-end if;
+/* Table : Commande */
+CREATE TABLE Commande (
+   id_users      INT NOT NULL,
+   id_produit    CHAR(10) NOT NULL,
+   quantite      INT,
+   prix          DECIMAL(10,2),
+   prix_total    DECIMAL(10,2),
+   date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   statut        ENUM('en_attente','payée','expédiée') DEFAULT 'en_attente',
+   CONSTRAINT PK_COMMANDE PRIMARY KEY (id_users, id_produit)
+) ENGINE=InnoDB;
 
-if exists(
-   select 1 from sys.systable 
-   where table_name='Commande'
-     and table_type in ('BASE', 'GBL TEMP')
-) then
-    drop table Commande
-end if;
+/* Table : Stocker */
+CREATE TABLE Stocker (
+   id_panier  INT NOT NULL,
+   id_produit CHAR(10) NOT NULL,
+   quantite   INT,
+   CONSTRAINT PK_STOCKER PRIMARY KEY (id_panier, id_produit)
+) ENGINE=InnoDB;
 
-if exists(
-   select 1 from sys.systable 
-   where table_name='Marque'
-     and table_type in ('BASE', 'GBL TEMP')
-) then
-    drop table Marque
-end if;
+-- =====================
+-- Ajout des clés étrangères
+-- =====================
+ALTER TABLE Commande
+   ADD CONSTRAINT FK_COMMANDE_PRODUIT FOREIGN KEY (id_produit)
+      REFERENCES Produit (id_produit)
+      ON UPDATE CASCADE ON DELETE RESTRICT;
 
-if exists(
-   select 1 from sys.systable 
-   where table_name='Panier'
-     and table_type in ('BASE', 'GBL TEMP')
-) then
-    drop table Panier
-end if;
+ALTER TABLE Commande
+   ADD CONSTRAINT FK_COMMANDE_UTILISATEUR FOREIGN KEY (id_users)
+      REFERENCES Utilisateurs (id_users)
+      ON UPDATE CASCADE ON DELETE RESTRICT;
 
-if exists(
-   select 1 from sys.systable 
-   where table_name='Produit'
-     and table_type in ('BASE', 'GBL TEMP')
-) then
-    drop table Produit
-end if;
+ALTER TABLE Panier
+   ADD CONSTRAINT FK_PANIER_UTILISATEUR FOREIGN KEY (id_users)
+      REFERENCES Utilisateurs (id_users)
+      ON UPDATE CASCADE ON DELETE RESTRICT;
 
-if exists(
-   select 1 from sys.systable 
-   where table_name='Stocker'
-     and table_type in ('BASE', 'GBL TEMP')
-) then
-    drop table Stocker
-end if;
+ALTER TABLE Produit
+   ADD CONSTRAINT FK_PRODUIT_MARQUE FOREIGN KEY (id_marque)
+      REFERENCES Marque (id_marque)
+      ON UPDATE CASCADE ON DELETE RESTRICT;
 
-if exists(
-   select 1 from sys.systable 
-   where table_name='Utilisateurs'
-     and table_type in ('BASE', 'GBL TEMP')
-) then
-    drop table Utilisateurs
-end if;
+ALTER TABLE Produit
+   ADD CONSTRAINT FK_PRODUIT_CATEGORIE FOREIGN KEY (id_categorie)
+      REFERENCES Categorie (id_categorie)
+      ON UPDATE CASCADE ON DELETE RESTRICT;
 
-/*==============================================================*/
-/* Table : Categorie                                            */
-/*==============================================================*/
-create table Categorie 
-(
-   id_categorie         integer                        not null,
-   nom                  varchar(20)                    null,
-   constraint PK_CATEGORIE primary key (id_categorie)
-);
+ALTER TABLE Stocker
+   ADD CONSTRAINT FK_STOCKER_PRODUIT FOREIGN KEY (id_produit)
+      REFERENCES Produit (id_produit)
+      ON UPDATE CASCADE ON DELETE RESTRICT;
 
-/*==============================================================*/
-/* Table : Commande                                             */
-/*==============================================================*/
-create table Commande 
-(
-   id_users             integer                        not null,
-   id_produit           char(10)                       not null,
-   quantite             integer                        null,
-   prix                 decimal                        null,
-   prix_total           decimal                        null,
-   date_creation        timestamp                      null,
-   statut               ENUM('en_attente','payée','expédiée') DEFAULT 'en_attente',
-   constraint PK_COMMANDE primary key (id_users, id_produit)
-);
-
-/*==============================================================*/
-/* Table : Marque                                               */
-/*==============================================================*/
-create table Marque 
-(
-   id_marque            integer                        not null,
-   nom                  varchar(20)                    null,
-   constraint PK_MARQUE primary key (id_marque)
-);
-
-/*==============================================================*/
-/* Table : Panier                                               */
-/*==============================================================*/
-create table Panier 
-(
-   id_panier            integer                        not null,
-   id_users             integer                        not null,
-   date_creation        timestamp                      null,
-   constraint PK_PANIER primary key (id_panier)
-);
-
-/*==============================================================*/
-/* Table : Produit                                              */
-/*==============================================================*/
-create table Produit 
-(
-   id_produit           char(10)                       not null,
-   id_categorie         integer                        not null,
-   id_marque            integer                        not null,
-   nom                  varchar(20)                    null,
-   description          varchar(100)                   null,
-   prix                 decimal                        null,
-   stock                integer                        null,
-   qr_code_path         varchar(100)                   null,
-   date_creation        timestamp                      null,
-   reste                integer                        null,
-   constraint PK_PRODUIT primary key (id_produit)
-);
-
-/*==============================================================*/
-/* Table : Stocker                                              */
-/*==============================================================*/
-create table Stocker 
-(
-   id_panier            integer                        not null,
-   id_produit           char(10)                       not null,
-   quantite             integer                        null,
-   constraint PK_STOCKER primary key (id_panier, id_produit)
-);
-
-/*==============================================================*/
-/* Table : Utilisateurs                                         */
-/*==============================================================*/
-create table Utilisateurs 
-(
-   id_users             integer                        not null,
-   nom                  varchar(20)                    null,
-   email                varchar(100)                   null,
-   mdp_hash             varchar(50)                    null,
-   date_creation        timestamp                      null,
-   role                 ENUM('admin','client') DEFAULT 'client',
-   constraint PK_UTILISATEURS primary key (id_users)
-);
-
-alter table Commande
-   add constraint FK_COMMANDE_COMMANDE_PRODUIT foreign key (id_produit)
-      references Produit (id_produit)
-      on update restrict
-      on delete restrict;
-
-alter table Commande
-   add constraint FK_COMMANDE_COMMANDE2_UTILISAT foreign key (id_users)
-      references Utilisateurs (id_users)
-      on update restrict
-      on delete restrict;
-
-alter table Panier
-   add constraint FK_PANIER_AVOIR_UTILISAT foreign key (id_users)
-      references Utilisateurs (id_users)
-      on update restrict
-      on delete restrict;
-
-alter table Produit
-   add constraint FK_PRODUIT_FABRIQUE_MARQUE foreign key (id_marque)
-      references Marque (id_marque)
-      on update restrict
-      on delete restrict;
-
-alter table Produit
-   add constraint FK_PRODUIT_APPARTIEN_CATEGORI foreign key (id_categorie)
-      references Categorie (id_categorie)
-      on update restrict
-      on delete restrict;
-
-alter table Stocker
-   add constraint FK_STOCKER_STOCKER_PRODUIT foreign key (id_produit)
-      references Produit (id_produit)
-      on update restrict
-      on delete restrict;
-
-alter table Stocker
-   add constraint FK_STOCKER_STOCKER2_PANIER foreign key (id_panier)
-      references Panier (id_panier)
-      on update restrict
-      on delete restrict;
+ALTER TABLE Stocker
+   ADD CONSTRAINT FK_STOCKER_PANIER FOREIGN KEY (id_panier)
+      REFERENCES Panier (id_panier)
+      ON UPDATE CASCADE ON DELETE RESTRICT;
