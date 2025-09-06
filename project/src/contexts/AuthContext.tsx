@@ -19,12 +19,15 @@ export const useAuth = () => {
   return context;
 };
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser));
@@ -32,59 +35,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error loading user from localStorage:', error);
       }
     }
+    // Optionally validate token with /auth/me
+    if (token) {
+      fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` }})
+        .then(res => res.ok ? res.json() : Promise.reject('invalid'))
+        .catch(() => {
+          localStorage.removeItem('token');
+        });
+    }
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock login validation
-    if (email && password) {
-      const mockUser: User = {
-        id: 1,
-        name: email.split('@')[0],
-        email: email,
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      setIsLoading(false);
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      const appUser: User = { id: data.user_id, name: data.nom, email: data.email };
+      setUser(appUser);
+      localStorage.setItem('user', JSON.stringify(appUser));
+      localStorage.setItem('token', data.access_token);
       return true;
+    } catch (e) {
+      return false;
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
-    return false;
   };
 
   const signup = async (name: string, email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock signup validation
-    if (name && email && password) {
-      const mockUser: User = {
-        id: Date.now(),
-        name: name,
-        email: email,
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      setIsLoading(false);
+    try {
+      const res = await fetch(`${API_URL}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nom: name, email, password })
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      const appUser: User = { id: data.user_id, name: data.nom, email: data.email };
+      setUser(appUser);
+      localStorage.setItem('user', JSON.stringify(appUser));
+      localStorage.setItem('token', data.access_token);
       return true;
+    } catch (e) {
+      return false;
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
-    return false;
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
   };
 
   return (

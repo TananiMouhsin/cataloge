@@ -1,11 +1,9 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer
-from pydantic import BaseModel
-from typing import List, Optional
 import uvicorn
-from datetime import datetime
-import uuid
+from .routers import router as api_router
+from .database import engine
+from . import models
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -23,58 +21,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Security
-security = HTTPBearer()
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
-# Pydantic models
-class ProductBase(BaseModel):
-    name: str
-    description: str
-    price: float
-    category: str
-    image_url: Optional[str] = None
-    stock: int = 0
 
-class Product(ProductBase):
-    id: str
-    created_at: datetime
-    updated_at: datetime
+app.include_router(api_router, prefix="")
 
-class ProductCreate(ProductBase):
-    pass
 
-class ProductUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    price: Optional[float] = None
-    category: Optional[str] = None
-    image_url: Optional[str] = None
-    stock: Optional[int] = None
-
-class User(BaseModel):
-    id: str
-    username: str
-    email: str
-    created_at: datetime
-
-class UserCreate(BaseModel):
-    username: str
-    email: str
-    password: str
-
-class CartItem(BaseModel):
-    product_id: str
-    quantity: int
-
-class Cart(BaseModel):
-    user_id: str
-    items: List[CartItem]
-    total: float
-
-# Database connection will be added here
-
-# API Endpoints
-# All endpoints have been removed
+@app.on_event("startup")
+def on_startup():
+    # Auto-create tables for SQLite (and others if desired)
+    models.Base.metadata.create_all(bind=engine)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

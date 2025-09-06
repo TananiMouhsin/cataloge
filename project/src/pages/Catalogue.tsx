@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, SortAsc, SortDesc, Grid, List, Sparkles, TrendingUp } from 'lucide-react';
+import { Search, Filter, SortAsc, SortDesc, Grid, List, Sparkles, TrendingUp, Loader2 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import Notification from '../components/Notification';
-import { products, categories } from '../data/products';
+import { fetchProducts, fetchCategories, fetchBrands, ApiProduct, ApiCategory, ApiBrand } from '../lib/api';
 import { Product } from '../types';
 
 const ITEMS_PER_PAGE = 12;
@@ -18,6 +18,10 @@ const Catalogue: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error' | 'info';
@@ -28,21 +32,40 @@ const Catalogue: React.FC = () => {
     isVisible: false,
   });
 
-  const brands = useMemo(() => {
-    const uniqueBrands = [...new Set(products.map(p => p.brand))];
-    return uniqueBrands.sort();
+  // Load data from API
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const [productsData, categoriesData, brandsData] = await Promise.all([
+          fetchProducts(),
+          fetchCategories(),
+          fetchBrands()
+        ]);
+        setProducts(productsData);
+        setCategories(categoriesData);
+        setBrands(brandsData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        showNotification('Erreur lors du chargement des données', 'error');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
   }, []);
 
   const filteredProducts = useMemo(() => {
     let filtered = products.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           product.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           product.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = product.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           product.marque.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           product.categorie.nom.toLowerCase().includes(searchQuery.toLowerCase());
       
-      const matchesCategory = !selectedCategory || product.category === selectedCategory;
-      const matchesBrand = !selectedBrand || product.brand === selectedBrand;
-      const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-      const matchesNew = !showNew || product.isNew;
+      const matchesCategory = !selectedCategory || product.categorie.nom === selectedCategory;
+      const matchesBrand = !selectedBrand || product.marque.nom === selectedBrand;
+      const matchesPrice = product.prix >= priceRange[0] && product.prix <= priceRange[1];
+      // For now, we'll skip the "new" filter since we don't have that field in the API
+      const matchesNew = !showNew; // Always true for now
 
       return matchesSearch && matchesCategory && matchesBrand && matchesPrice && matchesNew;
     });
@@ -50,21 +73,23 @@ const Catalogue: React.FC = () => {
     // Sort products
     switch (sortBy) {
       case 'price-asc':
-        filtered.sort((a, b) => a.price - b.price);
+        filtered.sort((a, b) => a.prix - b.prix);
         break;
       case 'price-desc':
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort((a, b) => b.prix - a.prix);
         break;
       case 'newest':
-        filtered.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
+        // Sort by id_produit for now (newest first)
+        filtered.sort((a, b) => b.id_produit.localeCompare(a.id_produit));
         break;
       case 'popularity':
-        filtered.sort((a, b) => b.rating - a.rating);
+        // Sort by stock for now (more stock = more popular)
+        filtered.sort((a, b) => b.stock - a.stock);
         break;
     }
 
     return filtered;
-  }, [searchQuery, selectedCategory, selectedBrand, priceRange, showNew, sortBy]);
+  }, [searchQuery, selectedCategory, selectedBrand, priceRange, showNew, sortBy, products, categories, brands]);
 
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -123,7 +148,7 @@ const Catalogue: React.FC = () => {
             Notre Catalogue
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Découvrez {products.length} produits soigneusement sélectionnés pour vous
+            Découvrez {isLoading ? '...' : products.length} produits soigneusement sélectionnés pour vous
           </p>
           <div className="flex items-center justify-center mt-4 space-x-4">
             <div className="flex items-center text-sm text-gray-600">
@@ -188,8 +213,8 @@ const Catalogue: React.FC = () => {
                 >
                   <option value="">Toutes les catégories</option>
                   {categories.map(category => (
-                    <option key={category.id} value={category.name}>
-                      {category.name}
+                    <option key={category.id_categorie} value={category.nom}>
+                      {category.nom}
                     </option>
                   ))}
                 </select>
@@ -207,8 +232,8 @@ const Catalogue: React.FC = () => {
                 >
                   <option value="">Toutes les marques</option>
                   {brands.map(brand => (
-                    <option key={brand} value={brand}>
-                      {brand}
+                    <option key={brand.id_marque} value={brand.nom}>
+                      {brand.nom}
                     </option>
                   ))}
                 </select>
@@ -329,7 +354,14 @@ const Catalogue: React.FC = () => {
             </motion.div>
 
             {/* Products Grid */}
-            {paginatedProducts.length > 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center">
+                  <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+                  <p className="text-gray-600">Chargement des produits...</p>
+                </div>
+              </div>
+            ) : paginatedProducts.length > 0 ? (
               <>
                 <motion.div
                   className={`grid gap-6 ${
@@ -338,16 +370,32 @@ const Catalogue: React.FC = () => {
                       : 'grid-cols-1'
                   }`}
                 >
-                  {paginatedProducts.map((product, index) => (
-                    <ProductCard 
-                      key={product.id} 
-                      product={product} 
-                      index={index}
-                      onAddToCart={(productName) => {
-                        showNotification(`${productName} ajouté au panier !`, 'success');
-                      }}
-                    />
-                  ))}
+                  {paginatedProducts.map((product, index) => {
+                    // Convert API product to frontend Product format
+                    const frontendProduct: Product = {
+                      id: product.id_produit,
+                      name: product.nom,
+                      description: product.description || '',
+                      price: product.prix,
+                      image: product.qr_code_path || '/placeholder-product.jpg',
+                      category: product.categorie.nom,
+                      brand: product.marque.nom,
+                      rating: 4.5, // Default rating since we don't have it in API
+                      isNew: false, // Default since we don't have this field
+                      stock: product.stock
+                    };
+                    
+                    return (
+                      <ProductCard 
+                        key={product.id_produit} 
+                        product={frontendProduct} 
+                        index={index}
+                        onAddToCart={(productName) => {
+                          showNotification(`${productName} ajouté au panier !`, 'success');
+                        }}
+                      />
+                    );
+                  })}
                 </motion.div>
 
                 {/* Pagination */}
