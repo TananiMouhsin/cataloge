@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import { addToCart } from '../lib/api';
 
 const Cart: React.FC = () => {
   const { items, total, itemCount, updateQuantity, removeItem, clearCart } = useCart();
@@ -15,8 +16,26 @@ const Cart: React.FC = () => {
     }
   };
 
-  const handleCheckout = () => {
-    alert('Redirection vers le paiement (fonctionnalité simulée)');
+  const handleCheckout = async () => {
+    try {
+      // For each item, ensure it's synced to backend cart
+      for (const it of items) {
+        await addToCart(it.product.id, it.quantity);
+      }
+      // Then call backend order creation
+      const res = await fetch(import.meta.env.VITE_API_URL + '/orders', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + (localStorage.getItem('token') || ''),
+        },
+      });
+      if (!res.ok) throw new Error('Order failed');
+      // Clear local cart after successful order
+      clearCart();
+      alert('Commande créée avec succès.');
+    } catch (e) {
+      alert("Échec de la commande. Connectez-vous et réessayez.");
+    }
   };
 
   if (items.length === 0) {

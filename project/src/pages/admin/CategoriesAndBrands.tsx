@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, Tags, Building, Package } from 'lucide-react';
 import Button from '../../components/admin/UI/Button';
 import Card from '../../components/admin/UI/Card';
@@ -7,11 +7,18 @@ import Table from '../../components/admin/UI/Table';
 import CategoryForm from '../../components/admin/Forms/CategoryForm';
 import BrandForm from '../../components/admin/Forms/BrandForm';
 import { AdminCategory, AdminBrand } from '../../types';
-import { mockCategories, mockBrands, mockProducts } from '../../data/adminData';
+import { fetchCategories, fetchBrands, createCategory, updateCategory, deleteCategory, createBrand, updateBrand, deleteBrand } from '../../lib/api';
 
 const CategoriesAndBrands: React.FC = () => {
-  const [categories, setCategories] = useState<AdminCategory[]>(mockCategories);
-  const [brands, setBrands] = useState<AdminBrand[]>(mockBrands);
+  const [categories, setCategories] = useState<AdminCategory[]>([]);
+  const [brands, setBrands] = useState<AdminBrand[]>([]);
+  useEffect(() => {
+    (async () => {
+      const [cats, brs] = await Promise.all([fetchCategories(), fetchBrands()]);
+      setCategories(cats as unknown as AdminCategory[]);
+      setBrands(brs as unknown as AdminBrand[]);
+    })();
+  }, []);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<AdminCategory | undefined>();
@@ -19,12 +26,9 @@ const CategoriesAndBrands: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'categories' | 'brands'>('categories');
 
   // Category handlers
-  const handleCreateCategory = (category: Omit<AdminCategory, 'id_categorie'>) => {
-    const newCategory: AdminCategory = {
-      ...category,
-      id_categorie: Math.max(...categories.map(c => c.id_categorie)) + 1,
-    };
-    setCategories([...categories, newCategory]);
+  const handleCreateCategory = async (category: Omit<AdminCategory, 'id_categorie'>) => {
+    const created = await createCategory({ nom: category.nom });
+    setCategories(prev => [...prev, created as unknown as AdminCategory]);
     setIsCategoryModalOpen(false);
   };
 
@@ -33,31 +37,26 @@ const CategoriesAndBrands: React.FC = () => {
     setIsCategoryModalOpen(true);
   };
 
-  const handleUpdateCategory = (category: Omit<AdminCategory, 'id_categorie'>) => {
+  const handleUpdateCategory = async (category: Omit<AdminCategory, 'id_categorie'>) => {
     if (editingCategory) {
-      setCategories(categories.map(c => 
-        c.id_categorie === editingCategory.id_categorie 
-          ? { ...category, id_categorie: editingCategory.id_categorie }
-          : c
-      ));
+      const updated = await updateCategory(editingCategory.id_categorie, { nom: category.nom });
+      setCategories(prev => prev.map(c => c.id_categorie === (updated as any).id_categorie ? (updated as any) : c));
       setEditingCategory(undefined);
       setIsCategoryModalOpen(false);
     }
   };
 
-  const handleDeleteCategory = (id: number) => {
+  const handleDeleteCategory = async (id: number) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
-      setCategories(categories.filter(c => c.id_categorie !== id));
+      await deleteCategory(id);
+      setCategories(prev => prev.filter(c => c.id_categorie !== id));
     }
   };
 
   // Brand handlers
-  const handleCreateBrand = (brand: Omit<AdminBrand, 'id_marque'>) => {
-    const newBrand: AdminBrand = {
-      ...brand,
-      id_marque: Math.max(...brands.map(b => b.id_marque)) + 1,
-    };
-    setBrands([...brands, newBrand]);
+  const handleCreateBrand = async (brand: Omit<AdminBrand, 'id_marque'>) => {
+    const created = await createBrand({ nom: brand.nom });
+    setBrands(prev => [...prev, created as unknown as AdminBrand]);
     setIsBrandModalOpen(false);
   };
 
@@ -66,21 +65,19 @@ const CategoriesAndBrands: React.FC = () => {
     setIsBrandModalOpen(true);
   };
 
-  const handleUpdateBrand = (brand: Omit<AdminBrand, 'id_marque'>) => {
+  const handleUpdateBrand = async (brand: Omit<AdminBrand, 'id_marque'>) => {
     if (editingBrand) {
-      setBrands(brands.map(b => 
-        b.id_marque === editingBrand.id_marque 
-          ? { ...brand, id_marque: editingBrand.id_marque }
-          : b
-      ));
+      const updated = await updateBrand(editingBrand.id_marque, { nom: brand.nom });
+      setBrands(prev => prev.map(b => b.id_marque === (updated as any).id_marque ? (updated as any) : b));
       setEditingBrand(undefined);
       setIsBrandModalOpen(false);
     }
   };
 
-  const handleDeleteBrand = (id: number) => {
+  const handleDeleteBrand = async (id: number) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette marque ?')) {
-      setBrands(brands.filter(b => b.id_marque !== id));
+      await deleteBrand(id);
+      setBrands(prev => prev.filter(b => b.id_marque !== id));
     }
   };
 
@@ -165,7 +162,7 @@ const CategoriesAndBrands: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Catégories</p>
-              <p className="text-2xl font-semibold text-gray-900">{mockCategories.length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{categories.length}</p>
             </div>
           </div>
         </Card>
@@ -177,7 +174,7 @@ const CategoriesAndBrands: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Marques</p>
-              <p className="text-2xl font-semibold text-gray-900">{mockBrands.length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{brands.length}</p>
             </div>
           </div>
         </Card>
@@ -189,7 +186,7 @@ const CategoriesAndBrands: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Produits Associés</p>
-              <p className="text-2xl font-semibold text-gray-900">{mockProducts.length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{categories.length + brands.length}</p>
             </div>
           </div>
         </Card>

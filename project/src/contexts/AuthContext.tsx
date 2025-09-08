@@ -7,6 +7,8 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  role: string | null;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,10 +26,12 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
+    const savedRole = localStorage.getItem('role');
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser));
@@ -35,10 +39,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error loading user from localStorage:', error);
       }
     }
+    if (savedRole) {
+      setRole(savedRole);
+    }
     // Optionally validate token with /auth/me
     if (token) {
       fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` }})
         .then(res => res.ok ? res.json() : Promise.reject('invalid'))
+        .then(data => {
+          if (data && data.role) {
+            setRole(data.role);
+            localStorage.setItem('role', data.role);
+          }
+        })
         .catch(() => {
           localStorage.removeItem('token');
         });
@@ -59,6 +72,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(appUser);
       localStorage.setItem('user', JSON.stringify(appUser));
       localStorage.setItem('token', data.access_token);
+      if (data.role) {
+        setRole(data.role);
+        localStorage.setItem('role', data.role);
+      }
       return true;
     } catch (e) {
       return false;
@@ -81,6 +98,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(appUser);
       localStorage.setItem('user', JSON.stringify(appUser));
       localStorage.setItem('token', data.access_token);
+      if (data.role) {
+        setRole(data.role);
+        localStorage.setItem('role', data.role);
+      }
       return true;
     } catch (e) {
       return false;
@@ -91,8 +112,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
+    setRole(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('role');
   };
 
   return (
@@ -103,6 +126,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signup,
         logout,
         isLoading,
+        role,
+        isAdmin: role === 'admin',
       }}
     >
       {children}

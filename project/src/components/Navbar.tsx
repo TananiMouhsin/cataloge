@@ -9,7 +9,7 @@ import CartPanel from './CartPanel';
 const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { itemCount, isOpen, openCart, closeCart } = useCart();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const location = useLocation();
 
   const navItems = [
@@ -58,12 +58,14 @@ const Navbar: React.FC = () => {
               {user ? (
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-gray-600">Bonjour, {user.name}</span>
-                  <Link
-                    to="/admin"
-                    className="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors"
-                  >
-                    <span className="text-sm">Admin</span>
-                  </Link>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors"
+                    >
+                      <span className="text-sm">Admin</span>
+                    </Link>
+                  )}
                   <button
                     onClick={logout}
                     className="p-2 text-gray-600 hover:text-primary transition-colors"
@@ -137,13 +139,15 @@ const Navbar: React.FC = () => {
                   {user ? (
                     <div className="px-3 py-2">
                       <p className="text-sm text-gray-600">Bonjour, {user.name}</p>
-                      <Link
-                        to="/admin"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="block px-3 py-2 text-sm text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md"
-                      >
-                        Admin
-                      </Link>
+                      {isAdmin && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="block px-3 py-2 text-sm text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md"
+                        >
+                          Admin
+                        </Link>
+                      )}
                       <button
                         onClick={() => {
                           logout();

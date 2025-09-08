@@ -34,7 +34,7 @@ const Login: React.FC = () => {
   const [errors, setErrors] = useState<Partial<AuthForm>>({});
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login, signup } = useAuth();
+  const { login, signup, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const validateForm = () => {
@@ -99,7 +99,8 @@ const Login: React.FC = () => {
       }
 
       if (success) {
-        navigate('/');
+        const r = localStorage.getItem('role');
+        navigate(r === 'admin' ? '/admin' : '/');
       } else {
         setErrors({ 
           email: isSignup ? 'Erreur lors de l\'inscription' : 'Email ou mot de passe incorrect' 

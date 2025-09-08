@@ -41,7 +41,7 @@ class Utilisateurs(Base):
 class Produit(Base):
     __tablename__ = "Produit"
 
-    id_produit = Column(String(10), primary_key=True)
+    id_produit = Column(Integer, primary_key=True, autoincrement=True)
     id_categorie = Column(Integer, ForeignKey("Categorie.id_categorie"), nullable=False)
     id_marque = Column(Integer, ForeignKey("Marque.id_marque"), nullable=False)
     nom = Column(String(100))
@@ -67,20 +67,27 @@ class Panier(Base):
 class Commande(Base):
     __tablename__ = "Commande"
 
-    id_users = Column(Integer, ForeignKey("Utilisateurs.id_users"), primary_key=True)
-    id_produit = Column(String(10), ForeignKey("Produit.id_produit"), primary_key=True)
+    id_commande = Column(Integer, primary_key=True, autoincrement=True)
+    id_users = Column(Integer, ForeignKey("Utilisateurs.id_users"), nullable=False)
+    id_produit = Column(Integer, ForeignKey("Produit.id_produit"), nullable=False)
     quantite = Column(Integer)
-    prix = Column(DECIMAL(10, 2))
-    prix_total = Column(DECIMAL(10, 2))
-    date_creation = Column(TIMESTAMP)
-    # statut omitted enum mapping for brevity
+    prix_unitaire = Column(DECIMAL(10, 2))
+    date_commande = Column(TIMESTAMP)
+
+
+    
 
 
 class Stocker(Base):
     __tablename__ = "Stocker"
 
-    id_panier = Column(Integer, ForeignKey("Panier.id_panier"), primary_key=True)
-    id_produit = Column(String(10), ForeignKey("Produit.id_produit"), primary_key=True)
-    quantite = Column(Integer)
+    id_stocker = Column(Integer, primary_key=True, autoincrement=True)
+    id_panier = Column(Integer, ForeignKey("Panier.id_panier"), index=True)
+    id_produit = Column(Integer, ForeignKey("Produit.id_produit"))
+    quantite_stock = Column(Integer)
+    date_mise_a_jour = Column(TIMESTAMP)
 
+
+
+    
 

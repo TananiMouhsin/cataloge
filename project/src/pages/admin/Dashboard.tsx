@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
 import { Package, Building, Tags, Users, ShoppingCart, DollarSign, TrendingUp, AlertTriangle, Eye } from 'lucide-react';
@@ -6,17 +6,33 @@ import StatCard from '../../components/admin/UI/StatCard';
 import Card from '../../components/admin/UI/Card';
 import Table from '../../components/admin/UI/Table';
 import Modal from '../../components/admin/UI/Modal';
-import { AdminCategory, AdminBrand, AdminProduct, AdminOrder } from '../../types';
-import { mockCategories, mockBrands, mockProducts, mockOrders, mockDashboardStats } from '../../data/adminData';
+import { AdminOrder } from '../../types';
+import { fetchProducts, fetchCategories, fetchBrands } from '../../lib/api';
+import type { ApiProduct, ApiCategory, ApiBrand } from '../../lib/api';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
 const Dashboard: React.FC = () => {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
 
-  const recentOrders = mockOrders.slice(0, 5);
-  const lowStockProducts = mockProducts.filter(p => p.stock < 10);
+  useEffect(() => {
+    (async () => {
+      const [prods, cats, brs] = await Promise.all([
+        fetchProducts(),
+        fetchCategories(),
+        fetchBrands(),
+      ]);
+      setProducts(prods);
+      setCategories(cats);
+      setBrands(brs);
+    })();
+  }, []);
+
+  const lowStockProducts = useMemo(() => products.filter(p => p.stock < 10), [products]);
 
   const monthlyOrders = {
     January: 8,
@@ -27,9 +43,9 @@ const Dashboard: React.FC = () => {
     June: 9,
   };
 
-  const categoryDistribution = mockCategories.map(category => ({
+  const categoryDistribution = categories.map(category => ({
     name: category.nom,
-    count: mockProducts.filter(p => p.id_categorie === category.id_categorie).length
+    count: products.filter(p => p.id_categorie === category.id_categorie).length
   }));
 
   const handleViewOrderDetails = (order: AdminOrder) => {
@@ -79,6 +95,9 @@ const Dashboard: React.FC = () => {
       ),
     },
   ];
+
+  // Placeholder orders until orders API exists
+  const recentOrders: AdminOrder[] = [];
 
   const pieChartData = {
     labels: categoryDistribution.map(c => c.name),
@@ -131,12 +150,12 @@ const Dashboard: React.FC = () => {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-        <StatCard title="Categories" value={mockDashboardStats.totalCategories} icon={Tags} color="blue" />
-        <StatCard title="Brands" value={mockDashboardStats.totalBrands} icon={Building} color="green" />
-        <StatCard title="Products" value={mockDashboardStats.totalProducts} icon={Package} color="purple" />
-        <StatCard title="Users" value={mockDashboardStats.totalUsers} icon={Users} color="yellow" />
-        <StatCard title="Orders" value={mockDashboardStats.totalOrders} icon={ShoppingCart} color="red" />
-        <StatCard title="Revenue" value={`$${mockDashboardStats.totalRevenue.toFixed(2)}`} icon={DollarSign} color="green" trend={{ value: 12.5, isPositive: true }} />
+        <StatCard title="Categories" value={categories.length} icon={Tags} color="blue" />
+        <StatCard title="Brands" value={brands.length} icon={Building} color="green" />
+        <StatCard title="Products" value={products.length} icon={Package} color="purple" />
+        <StatCard title="Users" value={0} icon={Users} color="yellow" />
+        <StatCard title="Orders" value={0} icon={ShoppingCart} color="red" />
+        <StatCard title="Revenue" value={`$${(0).toFixed(2)}`} icon={DollarSign} color="green" trend={{ value: 0, isPositive: true }} />
       </div>
 
       {/* Analytics Charts */}
@@ -155,10 +174,10 @@ const Dashboard: React.FC = () => {
 
       {/* Additional Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Revenue" value={`$${mockDashboardStats.totalRevenue.toFixed(2)}`} icon={DollarSign} color="green" trend={{ value: 12.5, isPositive: true }} />
+        <StatCard title="Total Revenue" value={`$${(0).toFixed(2)}`} icon={DollarSign} color="green" trend={{ value: 0, isPositive: true }} />
         <StatCard title="Orders This Month" value={monthlyOrders.June} icon={Package} color="blue" trend={{ value: 8.2, isPositive: true }} />
         <StatCard title="Low Stock Items" value={lowStockProducts.length} icon={AlertTriangle} color="yellow" />
-        <StatCard title="Avg. Order Value" value={`$${(mockDashboardStats.totalRevenue / mockOrders.filter(o => o.statut === 'Completed').length).toFixed(2)}`} icon={TrendingUp} color="purple" trend={{ value: 5.3, isPositive: true }} />
+        <StatCard title="Avg. Order Value" value={`$${(0).toFixed(2)}`} icon={TrendingUp} color="purple" trend={{ value: 0, isPositive: true }} />
       </div>
 
       {/* Recent Orders and Low Stock Alert */}
@@ -183,8 +202,8 @@ const Dashboard: React.FC = () => {
                   <div>
                     <p className="font-medium text-gray-900">{product.nom}</p>
                     <p className="text-sm text-gray-600">
-                      {mockCategories.find(c => c.id_categorie === product.id_categorie)?.nom} • 
-                      {mockBrands.find(b => b.id_marque === product.id_marque)?.nom}
+                      {categories.find(c => c.id_categorie === product.id_categorie)?.nom} • 
+                      {brands.find(b => b.id_marque === product.id_marque)?.nom}
                     </p>
                   </div>
                   <div className="text-right">
@@ -242,7 +261,7 @@ const Dashboard: React.FC = () => {
               <h4 className="text-sm font-medium text-gray-700 mb-2">Products</h4>
               <div className="bg-gray-50 rounded-lg p-4">
                 {selectedOrder.produits.map((item, index) => {
-                  const product = mockProducts.find(p => p.id_produit === item.id_produit);
+                  const product = products.find(p => p.id_produit === item.id_produit);
                   return (
                     <div key={index} className="flex justify-between items-center py-2">
                       <div>

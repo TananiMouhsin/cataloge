@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, Package, TrendingUp, AlertTriangle, DollarSign } from 'lucide-react';
 import Button from '../../components/admin/UI/Button';
 import Card from '../../components/admin/UI/Card';
@@ -6,12 +6,28 @@ import Modal from '../../components/admin/UI/Modal';
 import Table from '../../components/admin/UI/Table';
 import ProductForm from '../../components/admin/Forms/ProductForm';
 import { AdminProduct } from '../../types';
-import { mockProducts, mockCategories, mockBrands } from '../../data/adminData';
+import { fetchProducts, fetchCategories, fetchBrands, createProduct, updateProduct, deleteProduct } from '../../lib/api';
+import type { ApiProduct, ApiCategory, ApiBrand } from '../../lib/api';
 
 const Products: React.FC = () => {
-  const [products, setProducts] = useState<AdminProduct[]>(mockProducts);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<AdminProduct | undefined>();
+  const [editingProduct, setEditingProduct] = useState<ApiProduct | undefined>();
+
+  useEffect(() => {
+    (async () => {
+      const [prods, cats, brs] = await Promise.all([
+        fetchProducts(),
+        fetchCategories(),
+        fetchBrands(),
+      ]);
+      setProducts(prods);
+      setCategories(cats);
+      setBrands(brs);
+    })();
+  }, []);
 
   // Calculate statistics
   const totalProducts = products.length;
@@ -19,36 +35,46 @@ const Products: React.FC = () => {
   const lowStockProducts = products.filter(p => p.stock < 10).length;
   const avgPrice = totalProducts > 0 ? totalValue / totalProducts : 0;
 
-  const handleCreate = (product: Omit<AdminProduct, 'id_produit' | 'date_creation'>) => {
-    const newProduct: AdminProduct = {
-      ...product,
-      id_produit: Math.max(...products.map(p => p.id_produit)) + 1,
-      date_creation: new Date().toISOString().split('T')[0],
-    };
-    setProducts([...products, newProduct]);
+  const handleCreate = async (product: Omit<AdminProduct, 'id_produit' | 'date_creation'>) => {
+    const created = await createProduct({
+      nom: product.nom,
+      description: product.description,
+      prix: product.prix,
+      stock: product.stock,
+      id_categorie: product.id_categorie,
+      id_marque: product.id_marque,
+      qr_code_path: product.qr_code_path,
+    });
+    setProducts(prev => [...prev, created]);
     setIsModalOpen(false);
   };
 
-  const handleEdit = (product: AdminProduct) => {
+  const handleEdit = (product: ApiProduct) => {
     setEditingProduct(product);
     setIsModalOpen(true);
   };
 
-  const handleUpdate = (product: Omit<AdminProduct, 'id_produit' | 'date_creation'>) => {
+  const handleUpdate = async (product: Omit<AdminProduct, 'id_produit' | 'date_creation'>) => {
     if (editingProduct) {
-      setProducts(products.map(p => 
-        p.id_produit === editingProduct.id_produit 
-          ? { ...product, id_produit: editingProduct.id_produit, date_creation: editingProduct.date_creation }
-          : p
-      ));
+      const updated = await updateProduct(editingProduct.id_produit, {
+        nom: product.nom,
+        description: product.description,
+        prix: product.prix,
+        stock: product.stock,
+        id_categorie: product.id_categorie,
+        id_marque: product.id_marque,
+        qr_code_path: product.qr_code_path,
+      });
+      setProducts(prev => prev.map(p => p.id_produit === updated.id_produit ? updated : p));
       setEditingProduct(undefined);
       setIsModalOpen(false);
     }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
-      setProducts(products.filter(p => p.id_produit !== id));
+      await deleteProduct(id);
+      setProducts(prev => prev.filter(p => p.id_produit !== id));
     }
   };
 
@@ -57,15 +83,15 @@ const Products: React.FC = () => {
     { key: 'nom', label: 'Nom' },
     { key: 'prix', label: 'Prix', render: (value: number) => `$${value.toFixed(2)}` },
     { key: 'stock', label: 'Stock' },
-    { 
-      key: 'id_categorie', 
-      label: 'Catégorie', 
-      render: (value: number) => mockCategories.find(c => c.id_categorie === value)?.nom || 'Unknown'
+    {
+      key: 'id_categorie',
+      label: 'Catégorie',
+      render: (value: number) => categories.find(c => c.id_categorie === value)?.nom || 'Unknown'
     },
-    { 
-      key: 'id_marque', 
-      label: 'Marque', 
-      render: (value: number) => mockBrands.find(b => b.id_marque === value)?.nom || 'Unknown'
+    {
+      key: 'id_marque',
+      label: 'Marque',
+      render: (value: number) => brands.find(b => b.id_marque === value)?.nom || 'Unknown'
     },
     {
       key: 'actions',
@@ -167,7 +193,7 @@ const Products: React.FC = () => {
           <h3 className="text-lg font-medium text-gray-900">Liste des Produits</h3>
           <p className="text-sm text-gray-600 mt-1">Gérez tous vos produits en un seul endroit</p>
         </div>
-        <Table columns={columns} data={products} />
+        <Table columns={columns} data={products as unknown as AdminProduct[]} />
       </Card>
 
       {/* Modal */}
@@ -181,9 +207,9 @@ const Products: React.FC = () => {
         size="lg"
       >
         <ProductForm
-          product={editingProduct}
-          categories={mockCategories}
-          brands={mockBrands}
+          product={editingProduct as unknown as AdminProduct}
+          categories={categories as unknown as any}
+          brands={brands as unknown as any}
           onSubmit={editingProduct ? handleUpdate : handleCreate}
           onCancel={() => {
             setIsModalOpen(false);

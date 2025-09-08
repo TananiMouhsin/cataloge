@@ -32,7 +32,7 @@ def create_admin_user():
         db.commit()
         db.refresh(admin_user)
         
-        print(f"✓ Utilisateur admin créé avec l'ID: {admin_user.id_users}")
+        print(f"Admin user created with ID: {admin_user.id_users}")
         print("Email: admin@example.com")
         print("Mot de passe: admin123")
         

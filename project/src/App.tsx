@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -20,11 +21,15 @@ import AdminCarts from './pages/admin/Carts';
 
 function AppContent() {
   const location = useLocation();
+  const { isAdmin } = useAuth();
   const isLoginPage = location.pathname === '/login';
   const isAdminPage = location.pathname.startsWith('/admin');
 
   // Don't show navbar and footer for admin pages
   if (isAdminPage) {
+    if (!isAdmin) {
+      return <div className="p-6 text-center text-red-600">Accès refusé. Compte administrateur requis.</div>;
+    }
     return (
       <Routes>
         <Route path="/admin" element={<AdminLayout />}>

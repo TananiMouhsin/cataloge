@@ -377,12 +377,14 @@ const Catalogue: React.FC = () => {
                       name: product.nom,
                       description: product.description || '',
                       price: product.prix,
-                      image: product.qr_code_path || '/placeholder-product.jpg',
+                      images: [product.qr_code_path || '/placeholder-product.jpg'], // Convert to array
                       category: product.categorie.nom,
                       brand: product.marque.nom,
                       rating: 4.5, // Default rating since we don't have it in API
                       isNew: false, // Default since we don't have this field
-                      stock: product.stock
+                      stock: product.stock,
+                      specifications: {}, // Empty specs for now
+                      reviews: [] // Empty reviews for now
                     };
                     
                     return (
