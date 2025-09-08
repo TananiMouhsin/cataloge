@@ -58,6 +58,7 @@ class SignupRequest(BaseModel):
     nom: str
     email: EmailStr
     password: str
+    role: Optional[str] = None
 
 
 class LoginRequest(BaseModel):

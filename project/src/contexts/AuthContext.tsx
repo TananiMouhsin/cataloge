@@ -4,7 +4,7 @@ import { User } from '../types';
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (name: string, email: string, password: string) => Promise<boolean>;
+  signup: (name: string, email: string, password: string, role?: 'admin' | 'client') => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
   role: string | null;
@@ -42,18 +42,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (savedRole) {
       setRole(savedRole);
     }
-    // Optionally validate token with /auth/me
+    // Optionally validate token with /auth/me (do NOT clear token on failure to avoid logging user out during page load)
     if (token) {
       fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` }})
-        .then(res => res.ok ? res.json() : Promise.reject('invalid'))
-        .then(data => {
+        .then(async (res) => {
+          if (!res.ok) return;
+          const data = await res.json();
           if (data && data.role) {
             setRole(data.role);
             localStorage.setItem('role', data.role);
           }
         })
         .catch(() => {
-          localStorage.removeItem('token');
+          // Silently ignore validation errors to prevent clearing a potentially valid token
         });
     }
   }, []);
@@ -84,13 +85,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signup = async (name: string, email: string, password: string): Promise<boolean> => {
+  const signup = async (name: string, email: string, password: string, role: 'admin' | 'client' = 'client'): Promise<boolean> => {
     setIsLoading(true);
     try {
       const res = await fetch(`${API_URL}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nom: name, email, password })
+        body: JSON.stringify({ nom: name, email, password, role })
       });
       if (!res.ok) return false;
       const data = await res.json();

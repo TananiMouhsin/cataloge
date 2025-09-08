@@ -35,6 +35,7 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const { login, signup, isAdmin } = useAuth();
+  const [isAdminSignup, setIsAdminSignup] = useState(false);
   const navigate = useNavigate();
 
   const validateForm = () => {
@@ -93,7 +94,7 @@ const Login: React.FC = () => {
       
       if (isSignup) {
         const fullName = `${form.firstName} ${form.lastName}`;
-        success = await signup(fullName, form.email, form.password);
+        success = await signup(fullName, form.email, form.password, isAdminSignup ? 'admin' : 'client');
       } else {
         success = await login(form.email, form.password);
       }
@@ -127,6 +128,7 @@ const Login: React.FC = () => {
     setIsSignup(!isSignup);
     setForm({ email: '', password: '', firstName: '', lastName: '', phone: '', confirmPassword: '' });
     setErrors({});
+    setIsAdminSignup(false);
   };
 
   const features = [
@@ -286,6 +288,16 @@ const Login: React.FC = () => {
                   <AnimatePresence mode="wait">
                     {isSignup && (
                       <>
+                        <div className="flex items-center mb-2">
+                          <input
+                            id="isAdminSignup"
+                            type="checkbox"
+                            checked={isAdminSignup}
+                            onChange={(e) => setIsAdminSignup(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <label htmlFor="isAdminSignup" className="text-sm text-gray-700">Créer en tant qu'admin</label>
+                        </div>
                         {/* Row 1: First Name, Last Name */}
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
@@ -598,3 +610,599 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+
+
+                                type="text"
+
+                                id="firstName"
+
+                                name="firstName"
+
+                                value={form.firstName}
+
+                                onChange={handleChange}
+
+                                className={`w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:bg-white transition-all duration-300 ${
+
+                                  errors.firstName ? 'border-red-300 bg-red-50' : ''
+
+                                }`}
+
+                                placeholder="Prénom"
+
+                              />
+
+                            </div>
+
+                            {errors.firstName && (
+
+                              <motion.p
+
+                                initial={{ opacity: 0, y: -10 }}
+
+                                animate={{ opacity: 1, y: 0 }}
+
+                                className="mt-2 text-sm text-red-600 flex items-center"
+
+                              >
+
+                                <X className="w-4 h-4 mr-1" />
+
+                                {errors.firstName}
+
+                              </motion.p>
+
+                            )}
+
+                          </div>
+
+
+
+                          <div>
+
+                            <label htmlFor="lastName" className="block text-sm font-semibold text-gray-700 mb-2">
+
+                              Nom
+
+                            </label>
+
+                            <div className="relative">
+
+                              <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+                              <input
+
+                                type="text"
+
+                                id="lastName"
+
+                                name="lastName"
+
+                                value={form.lastName}
+
+                                onChange={handleChange}
+
+                                className={`w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:bg-white transition-all duration-300 ${
+
+                                  errors.lastName ? 'border-red-300 bg-red-50' : ''
+
+                                }`}
+
+                                placeholder="Nom"
+
+                              />
+
+                            </div>
+
+                            {errors.lastName && (
+
+                              <motion.p
+
+                                initial={{ opacity: 0, y: -10 }}
+
+                                animate={{ opacity: 1, y: 0 }}
+
+                                className="mt-2 text-sm text-red-600 flex items-center"
+
+                              >
+
+                                <X className="w-4 h-4 mr-1" />
+
+                                {errors.lastName}
+
+                              </motion.p>
+
+                            )}
+
+                          </div>
+
+                        </motion.div>
+
+
+
+                        {/* Row 2: Email, Phone */}
+
+                        <motion.div
+
+                          initial={{ opacity: 0, height: 0 }}
+
+                          animate={{ opacity: 1, height: "auto" }}
+
+                          exit={{ opacity: 0, height: 0 }}
+
+                          transition={{ duration: 0.3, delay: 0.1 }}
+
+                          className="grid grid-cols-2 gap-4"
+
+                        >
+
+                          <div>
+
+                            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+
+                              Email
+
+                            </label>
+
+                            <div className="relative">
+
+                              <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+                              <input
+
+                                type="email"
+
+                                id="email"
+
+                                name="email"
+
+                                value={form.email}
+
+                                onChange={handleChange}
+
+                                className={`w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:bg-white transition-all duration-300 ${
+
+                                  errors.email ? 'border-red-300 bg-red-50' : ''
+
+                                }`}
+
+                                placeholder="votre@email.com"
+
+                              />
+
+                            </div>
+
+                            {errors.email && (
+
+                              <motion.p
+
+                                initial={{ opacity: 0, y: -10 }}
+
+                                animate={{ opacity: 1, y: 0 }}
+
+                                className="mt-2 text-sm text-red-600 flex items-center"
+
+                              >
+
+                                <X className="w-4 h-4 mr-1" />
+
+                                {errors.email}
+
+                              </motion.p>
+
+                            )}
+
+                          </div>
+
+
+
+                          <div>
+
+                            <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
+
+                              Téléphone
+
+                            </label>
+
+                            <div className="relative">
+
+                              <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+                              <input
+
+                                type="tel"
+
+                                id="phone"
+
+                                name="phone"
+
+                                value={form.phone}
+
+                                onChange={handleChange}
+
+                                className={`w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:bg-white transition-all duration-300 ${
+
+                                  errors.phone ? 'border-red-300 bg-red-50' : ''
+
+                                }`}
+
+                                placeholder="+33 6 12 34 56 78"
+
+                              />
+
+                            </div>
+
+                            {errors.phone && (
+
+                              <motion.p
+
+                                initial={{ opacity: 0, y: -10 }}
+
+                                animate={{ opacity: 1, y: 0 }}
+
+                                className="mt-2 text-sm text-red-600 flex items-center"
+
+                              >
+
+                                <X className="w-4 h-4 mr-1" />
+
+                                {errors.phone}
+
+                              </motion.p>
+
+                            )}
+
+                          </div>
+
+                        </motion.div>
+
+                      </>
+
+                    )}
+
+                  </AnimatePresence>
+
+
+
+                  {/* Login Email Field */}
+
+                  {!isSignup && (
+
+                    <div>
+
+                      <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+
+                        Adresse email
+
+                      </label>
+
+                      <div className="relative">
+
+                        <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+                        <input
+
+                          type="email"
+
+                          id="email"
+
+                          name="email"
+
+                          value={form.email}
+
+                          onChange={handleChange}
+
+                          className={`w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:bg-white transition-all duration-300 ${
+
+                            errors.email ? 'border-red-300 bg-red-50' : ''
+
+                          }`}
+
+                          placeholder="votre@email.com"
+
+                        />
+
+                      </div>
+
+                      {errors.email && (
+
+                        <motion.p
+
+                          initial={{ opacity: 0, y: -10 }}
+
+                          animate={{ opacity: 1, y: 0 }}
+
+                          className="mt-2 text-sm text-red-600 flex items-center"
+
+                        >
+
+                          <X className="w-4 h-4 mr-1" />
+
+                          {errors.email}
+
+                        </motion.p>
+
+                      )}
+
+                    </div>
+
+                  )}
+
+
+
+                  {/* Row 3: Password, Confirm Password (Signup) or just Password (Login) */}
+
+                  <div className={isSignup ? "grid grid-cols-2 gap-4" : ""}>
+
+                    <div>
+
+                      <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+
+                        Mot de passe
+
+                      </label>
+
+                      <div className="relative">
+
+                        <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+                        <input
+
+                          type={showPassword ? 'text' : 'password'}
+
+                          id="password"
+
+                          name="password"
+
+                          value={form.password}
+
+                          onChange={handleChange}
+
+                          className={`w-full pl-12 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:bg-white transition-all duration-300 ${
+
+                            errors.password ? 'border-red-300 bg-red-50' : ''
+
+                          }`}
+
+                          placeholder="••••••••"
+
+                        />
+
+                        <button
+
+                          type="button"
+
+                          onClick={() => setShowPassword(!showPassword)}
+
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+
+                        >
+
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+
+                        </button>
+
+                      </div>
+
+                      {errors.password && (
+
+                        <motion.p
+
+                          initial={{ opacity: 0, y: -10 }}
+
+                          animate={{ opacity: 1, y: 0 }}
+
+                          className="mt-2 text-sm text-red-600 flex items-center"
+
+                        >
+
+                          <X className="w-4 h-4 mr-1" />
+
+                          {errors.password}
+
+                        </motion.p>
+
+                      )}
+
+                    </div>
+
+
+
+                    <AnimatePresence mode="wait">
+
+                      {isSignup && (
+
+                        <motion.div
+
+                          initial={{ opacity: 0, height: 0 }}
+
+                          animate={{ opacity: 1, height: "auto" }}
+
+                          exit={{ opacity: 0, height: 0 }}
+
+                          transition={{ duration: 0.3, delay: 0.2 }}
+
+                        >
+
+                          <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
+
+                            Confirmer
+
+                          </label>
+
+                          <div className="relative">
+
+                            <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+                            <input
+
+                              type={showConfirmPassword ? 'text' : 'password'}
+
+                              id="confirmPassword"
+
+                              name="confirmPassword"
+
+                              value={form.confirmPassword}
+
+                              onChange={handleChange}
+
+                              className={`w-full pl-12 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:bg-white transition-all duration-300 ${
+
+                                errors.confirmPassword ? 'border-red-300 bg-red-50' : ''
+
+                              }`}
+
+                              placeholder="••••••••"
+
+                            />
+
+                            <button
+
+                              type="button"
+
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+
+                              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+
+                            >
+
+                              {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+
+                            </button>
+
+                          </div>
+
+                          {errors.confirmPassword && (
+
+                            <motion.p
+
+                              initial={{ opacity: 0, y: -10 }}
+
+                              animate={{ opacity: 1, y: 0 }}
+
+                              className="mt-2 text-sm text-red-600 flex items-center"
+
+                            >
+
+                              <X className="w-4 h-4 mr-1" />
+
+                              {errors.confirmPassword}
+
+                            </motion.p>
+
+                          )}
+
+                        </motion.div>
+
+                      )}
+
+                    </AnimatePresence>
+
+                  </div>
+
+
+
+                  <motion.button
+
+                    type="submit"
+
+                    disabled={isLoading}
+
+                    whileHover={{ scale: 1.02 }}
+
+                    whileTap={{ scale: 0.98 }}
+
+                    className="w-full bg-gradient-to-r from-primary to-secondary text-white py-3 rounded-xl font-semibold hover:from-secondary hover:to-primary transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
+
+                  >
+
+                    {isLoading ? (
+
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+
+                    ) : (
+
+                      <>
+
+                        <span>{isSignup ? 'Créer mon compte' : 'Se connecter'}</span>
+
+                        <ArrowRight className="w-5 h-5" />
+
+                      </>
+
+                    )}
+
+                  </motion.button>
+
+                </form>
+
+
+
+                <div className="mt-6 text-center">
+
+                  <p className="text-gray-600">
+
+                    {isSignup ? 'Déjà un compte ?' : 'Pas encore de compte ?'}
+
+                    <button
+
+                      onClick={toggleMode}
+
+                      className="ml-2 text-primary hover:text-secondary font-semibold transition-colors"
+
+                    >
+
+                      {isSignup ? 'Se connecter' : 'Créer un compte'}
+
+                    </button>
+
+                  </p>
+
+                </div>
+
+
+
+                {!isSignup && (
+
+                  <div className="mt-4 text-center">
+
+                    <Link
+
+                      to="/"
+
+                      className="text-sm text-gray-500 hover:text-primary transition-colors"
+
+                    >
+
+                      Mot de passe oublié ?
+
+                    </Link>
+
+                  </div>
+
+                )}
+
+
+
+
+
+              </motion.div>
+
+            </div>
+
+          </motion.div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  );
+
+};
+
+
+
+export default Login;
+

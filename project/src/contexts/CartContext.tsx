@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { CartItem, Product } from '../types';
+import { useAuth } from './AuthContext';
 
 interface CartState {
   items: CartItem[];
@@ -98,9 +99,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     itemCount: 0, 
     isOpen: false 
   });
+  const { user } = useAuth();
 
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
+    const userId = user?.id;
+    if (!userId) {
+      // No user logged in -> ensure empty cart in memory
+      dispatch({ type: 'LOAD_CART', payload: [] });
+      return;
+    }
+    const key = `cart:${userId}`;
+    const savedCart = localStorage.getItem(key);
     if (savedCart) {
       try {
         const cartItems = JSON.parse(savedCart);
@@ -108,12 +117,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         console.error('Error loading cart from localStorage:', error);
       }
+    } else {
+      dispatch({ type: 'LOAD_CART', payload: [] });
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(state.items));
-  }, [state.items]);
+    const userId = user?.id;
+    if (!userId) return;
+    const key = `cart:${userId}`;
+    localStorage.setItem(key, JSON.stringify(state.items));
+  }, [state.items, user?.id]);
 
   const addItem = (product: Product) => {
     dispatch({ type: 'ADD_ITEM', payload: product });

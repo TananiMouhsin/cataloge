@@ -32,10 +32,14 @@ def signup(payload: schemas.SignupRequest, db: Session = Depends(get_db)):
     existing = db.query(models.Utilisateurs).filter(models.Utilisateurs.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already used")
+    role_value = None
+    if payload.role in ("admin", "client"):
+        role_value = models.UserRole(payload.role)
     user = models.Utilisateurs(
         nom=payload.nom,
         email=payload.email,
         mdp_hash=security.hash_password(payload.password),
+        role=role_value or models.UserRole.client,
     )
     db.add(user)
     db.commit()
@@ -174,7 +178,7 @@ def create_brand(
     return brand
 
 
-# Basic cart endpoints (placeholders)
+# Cart endpoints - per-user cart using Panier and Stocker.id_panier
 @router.post("/cart/add")
 def cart_add(
     item: schemas.CartAddItem,
@@ -190,14 +194,23 @@ def cart_add(
         db.add(cart)
         db.commit()
         db.refresh(cart)
-    # Upsert item in Stocker legacy table (panier -> stocker)
-    stock = db.query(models.Stocker).filter(
-        models.Stocker.id_produit == item.id_produit,
-    ).first()
+    # Upsert item in Stocker for this user's cart (id_panier + id_produit)
+    stock = (
+        db.query(models.Stocker)
+        .filter(
+            models.Stocker.id_panier == cart.id_panier,
+            models.Stocker.id_produit == item.id_produit,
+        )
+        .first()
+    )
     if stock:
         stock.quantite_stock = (stock.quantite_stock or 0) + max(1, item.quantite)
     else:
-        stock = models.Stocker(id_produit=item.id_produit, quantite_stock=max(1, item.quantite))
+        stock = models.Stocker(
+            id_panier=cart.id_panier,
+            id_produit=item.id_produit,
+            quantite_stock=max(1, item.quantite),
+        )
         db.add(stock)
     db.commit()
     return {"ok": True}
@@ -213,11 +226,20 @@ def get_cart(
     cart = db.query(models.Panier).filter(models.Panier.id_users == user_id).first()
     if not cart:
         return schemas.CartOut(id_panier=0, id_users=user_id, items=[])
-    items = db.query(models.Stocker).all()
+    items = (
+        db.query(models.Stocker)
+        .filter(models.Stocker.id_panier == cart.id_panier)
+        .all()
+    )
     return schemas.CartOut(
         id_panier=cart.id_panier,
         id_users=user_id,
-        items=[schemas.CartItemOut(id_produit=i.id_produit, quantite=i.quantite_stock or 0) for i in items],
+        items=[
+            schemas.CartItemOut(
+                id_produit=i.id_produit, quantite=i.quantite_stock or 0
+            )
+            for i in items
+        ],
     )
 
 
@@ -232,7 +254,11 @@ def create_order(
     cart = db.query(models.Panier).filter(models.Panier.id_users == user_id).first()
     if not cart:
         raise HTTPException(status_code=400, detail="Cart is empty")
-    items = db.query(models.Stocker).all()
+    items = (
+        db.query(models.Stocker)
+        .filter(models.Stocker.id_panier == cart.id_panier)
+        .all()
+    )
     if not items:
         raise HTTPException(status_code=400, detail="Cart is empty")
     order_items: list[schemas.OrderItemOut] = []
@@ -241,12 +267,18 @@ def create_order(
         product = db.query(models.Produit).get(it.id_produit)
         if not product:
             continue
-        line_total = float(product.prix or 0) * (it.quantite or 0)
-        order_items.append(schemas.OrderItemOut(id_produit=it.id_produit, quantite=it.quantite or 0, prix=float(product.prix or 0)))
+        quantity = it.quantite_stock or 0
+        unit_price = float(product.prix or 0)
+        line_total = unit_price * quantity
+        order_items.append(
+            schemas.OrderItemOut(
+                id_produit=it.id_produit, quantite=quantity, prix=unit_price
+            )
+        )
         total += line_total
         # reduce stock
         if product.stock is not None:
-            product.stock = max(0, (product.stock or 0) - (it.quantite_stock or 0))
+            product.stock = max(0, (product.stock or 0) - quantity)
 
     # Insert lines into Commande table (one row per product)
     for oi in order_items:
@@ -257,7 +289,7 @@ def create_order(
             prix_unitaire=oi.prix,
         ))
 
-    # Clear cart
+    # Clear only this cart's items
     for it in items:
         db.delete(it)
 
