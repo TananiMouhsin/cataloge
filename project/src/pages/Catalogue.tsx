@@ -57,16 +57,15 @@ const Catalogue: React.FC = () => {
 
   const filteredProducts = useMemo(() => {
     let filtered = products.filter(product => {
+      const catName = product.categorie?.nom || '';
+      const brandName = product.marque?.nom || '';
       const matchesSearch = product.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           product.marque.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           product.categorie.nom.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesCategory = !selectedCategory || product.categorie.nom === selectedCategory;
-      const matchesBrand = !selectedBrand || product.marque.nom === selectedBrand;
+                           brandName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           catName.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = !selectedCategory || catName === selectedCategory;
+      const matchesBrand = !selectedBrand || brandName === selectedBrand;
       const matchesPrice = product.prix >= priceRange[0] && product.prix <= priceRange[1];
-      // For now, we'll skip the "new" filter since we don't have that field in the API
-      const matchesNew = !showNew; // Always true for now
-
+      const matchesNew = !showNew;
       return matchesSearch && matchesCategory && matchesBrand && matchesPrice && matchesNew;
     });
 
@@ -79,11 +78,10 @@ const Catalogue: React.FC = () => {
         filtered.sort((a, b) => b.prix - a.prix);
         break;
       case 'newest':
-        // Sort by id_produit for now (newest first)
-        filtered.sort((a, b) => b.id_produit.localeCompare(a.id_produit));
+        // Sort by id_produit (assumed numeric) newest first
+        filtered.sort((a, b) => (b.id_produit as unknown as number) - (a.id_produit as unknown as number));
         break;
       case 'popularity':
-        // Sort by stock for now (more stock = more popular)
         filtered.sort((a, b) => b.stock - a.stock);
         break;
     }
@@ -377,16 +375,16 @@ const Catalogue: React.FC = () => {
                       name: product.nom,
                       description: product.description || '',
                       price: product.prix,
-                      images: [product.qr_code_path || '/placeholder-product.jpg'], // Convert to array
-                      category: product.categorie.nom,
-                      brand: product.marque.nom,
-                      rating: 4.5, // Default rating since we don't have it in API
-                      isNew: false, // Default since we don't have this field
+                      images: [product.qr_code_path || '/placeholder-product.jpg'],
+                      category: product.categorie?.nom || 'Inconnu',
+                      brand: product.marque?.nom || 'Inconnu',
+                      rating: 4.5,
+                      isNew: false,
                       stock: product.stock,
-                      specifications: {}, // Empty specs for now
-                      reviews: [] // Empty reviews for now
+                      specifications: {},
+                      reviews: []
                     };
-                    
+
                     return (
                       <ProductCard 
                         key={product.id_produit} 

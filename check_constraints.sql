@@ -43,3 +43,4 @@ WHERE
     AND TABLE_NAME = 'stocker'
     AND CONSTRAINT_NAME != 'PRIMARY';
 
+

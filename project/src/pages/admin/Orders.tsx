@@ -1,83 +1,67 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ShoppingCart, Clock, CheckCircle, XCircle, TrendingUp, DollarSign } from 'lucide-react';
 import Card from '../../components/admin/UI/Card';
 import Table from '../../components/admin/UI/Table';
 import { AdminOrder } from '../../types';
-import { mockOrders, mockProducts } from '../../data/adminData';
+import { createOrder } from '../../lib/api';
 
 const Orders: React.FC = () => {
-  // Calculate statistics
-  const totalOrders = mockOrders.length;
-  const completedOrders = mockOrders.filter(o => o.statut === 'Completed').length;
-  const pendingOrders = mockOrders.filter(o => o.statut === 'Pending').length;
-  const totalRevenue = mockOrders.reduce((sum, o) => sum + o.prix_total, 0);
+  const [creating, setCreating] = useState(false);
+  const [lastOrderTotal, setLastOrderTotal] = useState<number | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const totalOrders = 0;
+  const completedOrders = 0;
+  const pendingOrders = 0;
+  const totalRevenue = lastOrderTotal || 0;
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
   const columns = [
     { key: 'id_commande', label: 'ID' },
     { key: 'quantite', label: 'Quantité' },
-    { 
-      key: 'prix_total', 
-      label: 'Prix total', 
-      render: (value: number) => `$${value.toFixed(2)}` 
-    },
-    { 
-      key: 'date_creation', 
-      label: 'Date de création',
-      render: (value: string) => new Date(value).toLocaleDateString('fr-FR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    },
-    { 
-      key: 'statut', 
-      label: 'Statut',
-      render: (value: string) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          value === 'Completed' ? 'bg-green-100 text-green-800' :
-          value === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-          'bg-red-100 text-red-800'
-        }`}>
-          {value === 'Completed' ? 'Terminée' :
-           value === 'Pending' ? 'En attente' : 'Annulée'}
-        </span>
-      )
-    },
-    {
-      key: 'produits',
-      label: 'Produits',
-      render: (value: any, row: AdminOrder) => (
-        <div className="space-y-1">
-          {row.produits.map((item, index) => {
-            const product = mockProducts.find(p => p.id_produit === item.id_produit);
-            return (
-              <div key={index} className="text-sm">
-                {product?.nom || 'Produit inconnu'} x{item.quantite}
-              </div>
-            );
-          })}
-        </div>
-      ),
-    },
+    { key: 'prix_total', label: 'Prix total', render: (value: number) => `$${value.toFixed(2)}` },
+    { key: 'date_creation', label: 'Date de création', render: (value: string) => new Date(value).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }) },
+    { key: 'statut', label: 'Statut', render: (value: string) => (<span className={`px-2 py-1 rounded-full text-xs font-medium ${value === 'Completed' ? 'bg-green-100 text-green-800' : value === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{value === 'Completed' ? 'Terminée' : value === 'Pending' ? 'En attente' : 'Annulée'}</span>) },
+    { key: 'produits', label: 'Produits', render: () => (<div className="text-sm text-gray-500">Historique non chargé</div>) },
   ];
+
+  const handleCreateOrder = async () => {
+    setCreating(true);
+    setMessage(null);
+    try {
+      const order = await createOrder();
+      setLastOrderTotal(order.prix_total);
+      setMessage('Commande créée à partir du panier.');
+    } catch (e: any) {
+      setMessage("Impossible de créer la commande. Assurez-vous d'être connecté et que le panier n'est pas vide.");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header with enhanced styling */}
       <div className="bg-gradient-to-r from-primary to-secondary rounded-lg p-6 text-white">
-        <div className="flex items-center">
-          <div className="p-3 bg-white bg-opacity-20 rounded-lg mr-4">
-            <ShoppingCart className="w-8 h-8" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="p-3 bg-white bg-opacity-20 rounded-lg mr-4">
+              <ShoppingCart className="w-8 h-8" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Commandes</h1>
+              <p className="text-accent mt-1">Créer une commande depuis le panier</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold">Commandes</h1>
-            <p className="text-accent mt-1">Suivez et gérez les commandes de vos clients</p>
-          </div>
+          <button onClick={handleCreateOrder} disabled={creating} className="px-4 py-2 bg-white text-primary rounded-lg font-semibold hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50">
+            {creating ? 'Création...' : 'Créer commande à partir du panier'}
+          </button>
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {message && (
+        <Card className="p-4">{message}</Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="p-6 border-l-4 border-l-primary">
           <div className="flex items-center">
@@ -90,7 +74,6 @@ const Orders: React.FC = () => {
             </div>
           </div>
         </Card>
-
         <Card className="p-6 border-l-4 border-l-secondary">
           <div className="flex items-center">
             <div className="p-3 bg-secondary/10 rounded-lg">
@@ -102,7 +85,6 @@ const Orders: React.FC = () => {
             </div>
           </div>
         </Card>
-
         <Card className="p-6 border-l-4 border-l-accent">
           <div className="flex items-center">
             <div className="p-3 bg-accent/10 rounded-lg">
@@ -114,7 +96,6 @@ const Orders: React.FC = () => {
             </div>
           </div>
         </Card>
-
         <Card className="p-6 border-l-4 border-l-primary">
           <div className="flex items-center">
             <div className="p-3 bg-primary/10 rounded-lg">
@@ -128,27 +109,25 @@ const Orders: React.FC = () => {
         </Card>
       </div>
 
-      {/* Revenue Summary */}
       <Card className="p-6 bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/20">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-medium text-primary">Revenus Totaux</h3>
-            <p className="text-sm text-secondary">Tous les temps</p>
+            <h3 className="text-lg font-medium text-primary">Revenus (dernière commande)</h3>
+            <p className="text-sm text-secondary">Basé sur la dernière création</p>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-bold text-primary">${totalRevenue.toFixed(2)}</p>
-            <p className="text-sm text-secondary">{totalOrders} commandes</p>
+            <p className="text-3xl font-bold text-primary">${(lastOrderTotal || 0).toFixed(2)}</p>
+            <p className="text-sm text-secondary">1 commande</p>
           </div>
         </div>
       </Card>
 
-      {/* Orders Table */}
       <Card className="overflow-hidden">
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-900">Liste des Commandes</h3>
-          <p className="text-sm text-gray-600 mt-1">Détails de toutes vos commandes</p>
+          <p className="text-sm text-gray-600 mt-1">Historique non implémenté</p>
         </div>
-        <Table columns={columns} data={mockOrders} />
+        <Table columns={columns} data={[]} />
       </Card>
     </div>
   );

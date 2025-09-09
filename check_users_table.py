@@ -57,3 +57,4 @@ def check_and_create_users_table():
 if __name__ == "__main__":
     check_and_create_users_table()
 
+

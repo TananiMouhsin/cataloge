@@ -8,13 +8,16 @@ import ProductForm from '../../components/admin/Forms/ProductForm';
 import { AdminProduct } from '../../types';
 import { fetchProducts, fetchCategories, fetchBrands, createProduct, updateProduct, deleteProduct } from '../../lib/api';
 import type { ApiProduct, ApiCategory, ApiBrand } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Products: React.FC = () => {
+  const { isAdmin } = useAuth();
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ApiProduct | undefined>();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -36,17 +39,22 @@ const Products: React.FC = () => {
   const avgPrice = totalProducts > 0 ? totalValue / totalProducts : 0;
 
   const handleCreate = async (product: Omit<AdminProduct, 'id_produit' | 'date_creation'>) => {
-    const created = await createProduct({
-      nom: product.nom,
-      description: product.description,
-      prix: product.prix,
-      stock: product.stock,
-      id_categorie: product.id_categorie,
-      id_marque: product.id_marque,
-      qr_code_path: product.qr_code_path,
-    });
-    setProducts(prev => [...prev, created]);
-    setIsModalOpen(false);
+    setErrorMsg(null);
+    try {
+      const created = await createProduct({
+        nom: product.nom,
+        description: product.description,
+        prix: product.prix,
+        stock: product.stock,
+        id_categorie: product.id_categorie,
+        id_marque: product.id_marque,
+        qr_code_path: (product as any).qr_code_path,
+      });
+      setProducts(prev => [...prev, created]);
+      setIsModalOpen(false);
+    } catch (err: any) {
+      setErrorMsg('Création refusée. Connectez-vous en tant qu\'admin.');
+    }
   };
 
   const handleEdit = (product: ApiProduct) => {
@@ -55,26 +63,35 @@ const Products: React.FC = () => {
   };
 
   const handleUpdate = async (product: Omit<AdminProduct, 'id_produit' | 'date_creation'>) => {
+    setErrorMsg(null);
     if (editingProduct) {
-      const updated = await updateProduct(editingProduct.id_produit, {
-        nom: product.nom,
-        description: product.description,
-        prix: product.prix,
-        stock: product.stock,
-        id_categorie: product.id_categorie,
-        id_marque: product.id_marque,
-        qr_code_path: product.qr_code_path,
-      });
-      setProducts(prev => prev.map(p => p.id_produit === updated.id_produit ? updated : p));
-      setEditingProduct(undefined);
-      setIsModalOpen(false);
+      try {
+        const updated = await updateProduct(editingProduct.id_produit, {
+          nom: product.nom,
+          description: product.description,
+          prix: product.prix,
+          stock: product.stock,
+          id_categorie: product.id_categorie,
+          id_marque: product.id_marque,
+          qr_code_path: (product as any).qr_code_path,
+        });
+        setProducts(prev => prev.map(p => p.id_produit === updated.id_produit ? updated : p));
+        setEditingProduct(undefined);
+        setIsModalOpen(false);
+      } catch (err: any) {
+        setErrorMsg('Mise à jour refusée. Connectez-vous en tant qu\'admin.');
+      }
     }
   };
 
   const handleDelete = async (id: number) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
-      await deleteProduct(id);
-      setProducts(prev => prev.filter(p => p.id_produit !== id));
+      try {
+        await deleteProduct(id);
+        setProducts(prev => prev.filter(p => p.id_produit !== id));
+      } catch (err: any) {
+        setErrorMsg('Suppression refusée. Connectez-vous en tant qu\'admin.');
+      }
     }
   };
 
@@ -127,14 +144,20 @@ const Products: React.FC = () => {
             <p className="text-accent mt-1">Gérez votre catalogue de produits</p>
           </div>
           <Button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-white text-black hover:bg-primary hover:text-white border border-primary transition-all duration-200 shadow-md hover:shadow-lg"
+            onClick={() => isAdmin ? setIsModalOpen(true) : setErrorMsg('Action réservée aux administrateurs')}
+            className="bg-blue-600 text-white hover:bg-blue-700 border border-blue-600 transition-all duration-200 shadow-md hover:shadow-lg"
+            disabled={!isAdmin}
+            title={!isAdmin ? 'Réservé aux administrateurs' : undefined}
           >
             <Plus size={16} className="mr-2" />
-            Nouveau produit
+            Ajouter produit
           </Button>
         </div>
       </div>
+
+      {errorMsg && (
+        <div className="p-3 rounded border border-red-300 bg-red-50 text-red-700">{errorMsg}</div>
+      )}
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

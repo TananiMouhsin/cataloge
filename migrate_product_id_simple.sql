@@ -70,3 +70,4 @@ ALTER TABLE `stocker`
 -- 11. Réactiver les vérifications de clés étrangères
 SET FOREIGN_KEY_CHECKS = 1;
 
+

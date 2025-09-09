@@ -144,3 +144,19 @@ export async function addToCart(id_produit: number, quantite = 1) {
   return res.json();
 }
 
+export async function createOrder() {
+  const res = await fetch(`${API_URL}/orders`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error('Failed to create order');
+  return res.json();
+}
+
+export type ApiOrder = {
+  id_users: number;
+  items: { id_produit: number; quantite: number; prix: number }[];
+  prix_total: number;
+  date_creation?: string;
+};
+
