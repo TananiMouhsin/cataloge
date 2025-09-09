@@ -74,8 +74,6 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(auth_sc
     )
 
 
-
-
 # Read-only lists
 @router.get("/categories", response_model=list[schemas.CategorieOut])
 def list_categories(db: Session = Depends(get_db)):
@@ -121,12 +119,9 @@ def update_product(
     prod = db.query(models.Produit).get(id_produit)
     if not prod:
         raise HTTPException(status_code=404, detail="Product not found")
-    
-    # Mettre à jour seulement les champs fournis
     update_data = product_data.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(prod, field, value)
-    
     db.commit()
     db.refresh(prod)
     return prod
@@ -178,7 +173,7 @@ def create_brand(
     return brand
 
 
-# Cart endpoints - per-user cart using Panier and Stocker.id_panier
+# Cart endpoints - per-user cart
 @router.post("/cart/add")
 def cart_add(
     item: schemas.CartAddItem,
@@ -187,14 +182,12 @@ def cart_add(
 ):
     payload = _require_auth(credentials)
     user_id = int(payload["sub"]) if isinstance(payload.get("sub"), str) else payload.get("sub")
-    # Ensure cart exists
     cart = db.query(models.Panier).filter(models.Panier.id_users == user_id).first()
     if not cart:
         cart = models.Panier(id_users=user_id)
         db.add(cart)
         db.commit()
         db.refresh(cart)
-    # Upsert item in Stocker for this user's cart (id_panier + id_produit)
     stock = (
         db.query(models.Stocker)
         .filter(
@@ -250,7 +243,6 @@ def create_order(
 ):
     payload = _require_auth(credentials)
     user_id = int(payload["sub"]) if isinstance(payload.get("sub"), str) else payload.get("sub")
-    # Retrieve cart
     cart = db.query(models.Panier).filter(models.Panier.id_users == user_id).first()
     if not cart:
         raise HTTPException(status_code=400, detail="Cart is empty")
@@ -276,102 +268,80 @@ def create_order(
             )
         )
         total += line_total
-        # reduce stock
         if product.stock is not None:
             product.stock = max(0, (product.stock or 0) - quantity)
-
-    # Insert lines into Commande table (one row per product)
     for oi in order_items:
         db.add(models.Commande(
             id_users=user_id,
             id_produit=oi.id_produit,
             quantite=oi.quantite,
             prix_unitaire=oi.prix,
+            statut=models.OrderStatus.pending,
         ))
-
-    # Clear only this cart's items
     for it in items:
         db.delete(it)
-
     db.commit()
     return schemas.OrderOut(id_users=user_id, items=order_items, prix_total=total)
 
 
-# Admin CRUD pour Catégories (endpoints complets)
-@router.put("/categories/{id_categorie}", response_model=schemas.CategorieOut)
-def update_category(
-    id_categorie: int,
-    category_data: schemas.CategorieUpdate,
+# Admin: list all order rows
+@router.get("/orders", response_model=list[schemas.OrderRowOut])
+def list_orders(
     credentials: HTTPAuthorizationCredentials = Depends(auth_scheme),
     db: Session = Depends(get_db),
 ):
     payload = _require_auth(credentials)
     _require_admin(payload)
-    category = db.query(models.Categorie).get(id_categorie)
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
-    
-    update_data = category_data.dict(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(category, field, value)
-    
-    db.commit()
-    db.refresh(category)
-    return category
+    rows = db.query(models.Commande).all()
+    out: list[schemas.OrderRowOut] = []
+    for r in rows:
+        prod = db.query(models.Produit).get(r.id_produit)
+        status_value = None
+        if r.statut is not None:
+            raw = r.statut.value if hasattr(r.statut, 'value') else str(r.statut)
+            status_value = raw.capitalize()
+        out.append(schemas.OrderRowOut(
+            id_commande=r.id_commande,
+            id_users=r.id_users,
+            id_produit=r.id_produit,
+            quantite=r.quantite or 0,
+            prix_unitaire=float(r.prix_unitaire or 0),
+            date_commande=r.date_commande,
+            nom_produit=prod.nom if prod else None,
+            statut=status_value,
+        ))
+    return out
 
 
-@router.delete("/categories/{id_categorie}")
-def delete_category(
-    id_categorie: int,
+@router.put("/orders/{id_commande}/status", response_model=schemas.OrderRowOut)
+def update_order_status(
+    id_commande: int,
+    payload_in: schemas.OrderStatusUpdate,
     credentials: HTTPAuthorizationCredentials = Depends(auth_scheme),
     db: Session = Depends(get_db),
 ):
     payload = _require_auth(credentials)
     _require_admin(payload)
-    category = db.query(models.Categorie).get(id_categorie)
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
-    db.delete(category)
+    row = db.query(models.Commande).get(id_commande)
+    if not row:
+        raise HTTPException(status_code=404, detail="Order not found")
+    # Validate status (case-insensitive)
+    valid = {"pending", "completed", "canceled"}
+    incoming = (payload_in.statut or "").lower()
+    if incoming not in valid:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    row.statut = models.OrderStatus(incoming)
     db.commit()
-    return {"message": "Category deleted"}
-
-
-# Admin CRUD pour Marques (endpoints complets)
-@router.put("/brands/{id_marque}", response_model=schemas.MarqueOut)
-def update_brand(
-    id_marque: int,
-    brand_data: schemas.MarqueUpdate,
-    credentials: HTTPAuthorizationCredentials = Depends(auth_scheme),
-    db: Session = Depends(get_db),
-):
-    payload = _require_auth(credentials)
-    _require_admin(payload)
-    brand = db.query(models.Marque).get(id_marque)
-    if not brand:
-        raise HTTPException(status_code=404, detail="Brand not found")
-    
-    update_data = brand_data.dict(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(brand, field, value)
-    
-    db.commit()
-    db.refresh(brand)
-    return brand
-
-
-@router.delete("/brands/{id_marque}")
-def delete_brand(
-    id_marque: int,
-    credentials: HTTPAuthorizationCredentials = Depends(auth_scheme),
-    db: Session = Depends(get_db),
-):
-    payload = _require_auth(credentials)
-    _require_admin(payload)
-    brand = db.query(models.Marque).get(id_marque)
-    if not brand:
-        raise HTTPException(status_code=404, detail="Brand not found")
-    db.delete(brand)
-    db.commit()
-    return {"message": "Brand deleted"}
+    prod = db.query(models.Produit).get(row.id_produit)
+    return schemas.OrderRowOut(
+        id_commande=row.id_commande,
+        id_users=row.id_users,
+        id_produit=row.id_produit,
+        quantite=row.quantite or 0,
+        prix_unitaire=float(row.prix_unitaire or 0),
+        date_commande=row.date_commande,
+        nom_produit=prod.nom if prod else None,
+        statut=row.statut.value.capitalize(),
+    )
 
 

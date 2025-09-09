@@ -64,6 +64,12 @@ class Panier(Base):
     date_creation = Column(TIMESTAMP)
 
 
+class OrderStatus(str, enum.Enum):
+    pending = "pending"
+    completed = "completed"
+    canceled = "canceled"
+
+
 class Commande(Base):
     __tablename__ = "Commande"
 
@@ -73,9 +79,7 @@ class Commande(Base):
     quantite = Column(Integer)
     prix_unitaire = Column(DECIMAL(10, 2))
     date_commande = Column(TIMESTAMP)
-
-
-    
+    statut = Column(Enum(OrderStatus), default=OrderStatus.pending)
 
 
 class Stocker(Base):

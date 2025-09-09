@@ -150,3 +150,18 @@ class OrderOut(BaseModel):
     prix_total: float
     date_creation: Optional[datetime] = None
 
+
+class OrderRowOut(BaseModel):
+    id_commande: int
+    id_users: int
+    id_produit: int
+    quantite: int
+    prix_unitaire: float
+    date_commande: Optional[datetime] = None
+    nom_produit: Optional[str] = None
+    statut: Optional[str] = None
+
+
+class OrderStatusUpdate(BaseModel):
+    statut: str  # 'Pending' | 'Completed' | 'Canceled'
+

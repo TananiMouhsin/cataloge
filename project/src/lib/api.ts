@@ -153,6 +153,22 @@ export async function createOrder() {
   return res.json();
 }
 
+export async function fetchOrders() {
+  const res = await fetch(`${API_URL}/orders`, { headers: { ...authHeaders() } });
+  if (!res.ok) throw new Error('Failed to load orders');
+  return res.json();
+}
+
+export async function updateOrderStatus(id_commande: number, statut: 'Pending' | 'Completed' | 'Canceled') {
+  const res = await fetch(`${API_URL}/orders/${id_commande}/status`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ statut }),
+  });
+  if (!res.ok) throw new Error('Failed to update order status');
+  return res.json();
+}
+
 export type ApiOrder = {
   id_users: number;
   items: { id_produit: number; quantite: number; prix: number }[];

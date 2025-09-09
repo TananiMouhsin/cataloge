@@ -1,39 +1,101 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ShoppingCart, Clock, CheckCircle, XCircle, TrendingUp, DollarSign } from 'lucide-react';
 import Card from '../../components/admin/UI/Card';
 import Table from '../../components/admin/UI/Table';
-import { AdminOrder } from '../../types';
-import { createOrder } from '../../lib/api';
+import { fetchOrders, createOrder, updateOrderStatus } from '../../lib/api';
+
+type UIOrderRow = {
+  id_commande: number;
+  id_users: number;
+  nom_produit?: string;
+  quantite: number;
+  prix_unitaire: number;
+  date_commande?: string;
+  statut: 'Pending' | 'Completed' | 'Canceled';
+};
 
 const Orders: React.FC = () => {
+  const [rows, setRows] = useState<UIOrderRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [lastOrderTotal, setLastOrderTotal] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const totalOrders = 0;
-  const completedOrders = 0;
-  const pendingOrders = 0;
-  const totalRevenue = lastOrderTotal || 0;
+  const load = async () => {
+    setLoading(true);
+    setMessage(null);
+    try {
+      const data = await fetchOrders();
+      const mapped: UIOrderRow[] = data.map((r: any) => ({
+        id_commande: r.id_commande,
+        id_users: r.id_users,
+        nom_produit: r.nom_produit,
+        quantite: r.quantite,
+        prix_unitaire: r.prix_unitaire,
+        date_commande: r.date_commande,
+        statut: (r.statut || 'Pending') as UIOrderRow['statut'],
+      }));
+      setRows(mapped);
+    } catch (e: any) {
+      setMessage("Impossible de charger les commandes (admin requis).");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const totalOrders = rows.length;
+  const completedOrders = rows.filter(o => o.statut === 'Completed').length;
+  const pendingOrders = rows.filter(o => o.statut === 'Pending').length;
+  const totalRevenue = rows.reduce((sum, r) => sum + r.prix_unitaire * r.quantite, 0);
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
   const columns = [
     { key: 'id_commande', label: 'ID' },
+    { key: 'id_users', label: 'Client' },
+    { key: 'nom_produit', label: 'Produit' },
     { key: 'quantite', label: 'Quantité' },
-    { key: 'prix_total', label: 'Prix total', render: (value: number) => `$${value.toFixed(2)}` },
-    { key: 'date_creation', label: 'Date de création', render: (value: string) => new Date(value).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }) },
-    { key: 'statut', label: 'Statut', render: (value: string) => (<span className={`px-2 py-1 rounded-full text-xs font-medium ${value === 'Completed' ? 'bg-green-100 text-green-800' : value === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{value === 'Completed' ? 'Terminée' : value === 'Pending' ? 'En attente' : 'Annulée'}</span>) },
-    { key: 'produits', label: 'Produits', render: () => (<div className="text-sm text-gray-500">Historique non chargé</div>) },
+    { key: 'prix_unitaire', label: 'Prix Unitaire', render: (v: number) => `€${v.toFixed(2)}` },
+    { key: 'date_commande', label: 'Date', render: (v?: string) => v ? new Date(v).toLocaleDateString('fr-FR') : '-' },
+    { key: 'statut', label: 'Statut', render: (value: any, row: UIOrderRow) => (
+      <select
+        value={row.statut}
+        onChange={async (e) => {
+          const s = e.target.value as UIOrderRow['statut'];
+          const prev = row.statut;
+          setRows(prevRows => prevRows.map(r => r.id_commande === row.id_commande ? { ...r, statut: s } : r));
+          try {
+            await updateOrderStatus(row.id_commande, s.toLowerCase() as any);
+            setMessage('Statut mis à jour');
+          } catch (err) {
+            setRows(prevRows => prevRows.map(r => r.id_commande === row.id_commande ? { ...r, statut: prev } : r));
+            setMessage("Échec de mise à jour du statut");
+          }
+        }}
+        className={`px-2 py-1 rounded text-sm border ${
+          row.statut === 'Completed' ? 'bg-green-100 text-green-800 border-green-200' :
+          row.statut === 'Pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+          'bg-red-100 text-red-800 border-red-200'
+        }`}
+      >
+        <option value="Pending">En attente</option>
+        <option value="Completed">Terminée</option>
+        <option value="Canceled">Annulée</option>
+      </select>
+    ) },
   ];
 
   const handleCreateOrder = async () => {
     setCreating(true);
     setMessage(null);
     try {
-      const order = await createOrder();
-      setLastOrderTotal(order.prix_total);
+      await createOrder();
       setMessage('Commande créée à partir du panier.');
+      load();
     } catch (e: any) {
-      setMessage("Impossible de créer la commande. Assurez-vous d'être connecté et que le panier n'est pas vide.");
+      setMessage("Impossible de créer la commande. Connectez-vous et vérifiez le panier.");
     } finally {
       setCreating(false);
     }
@@ -49,11 +111,11 @@ const Orders: React.FC = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold">Commandes</h1>
-              <p className="text-accent mt-1">Créer une commande depuis le panier</p>
+              <p className="text-accent mt-1">Visualiser et gérer les commandes clients</p>
             </div>
           </div>
           <button onClick={handleCreateOrder} disabled={creating} className="px-4 py-2 bg-white text-primary rounded-lg font-semibold hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50">
-            {creating ? 'Création...' : 'Créer commande à partir du panier'}
+            {creating ? 'Création...' : 'Créer commande depuis panier'}
           </button>
         </div>
       </div>
@@ -103,31 +165,18 @@ const Orders: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Prix Moyen</p>
-              <p className="text-2xl font-semibold text-gray-900">${avgOrderValue.toFixed(2)}</p>
+              <p className="text-2xl font-semibold text-gray-900">€{avgOrderValue.toFixed(2)}</p>
             </div>
           </div>
         </Card>
       </div>
 
-      <Card className="p-6 bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/20">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-medium text-primary">Revenus (dernière commande)</h3>
-            <p className="text-sm text-secondary">Basé sur la dernière création</p>
-          </div>
-          <div className="text-right">
-            <p className="text-3xl font-bold text-primary">${(lastOrderTotal || 0).toFixed(2)}</p>
-            <p className="text-sm text-secondary">1 commande</p>
-          </div>
-        </div>
-      </Card>
-
       <Card className="overflow-hidden">
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-900">Liste des Commandes</h3>
-          <p className="text-sm text-gray-600 mt-1">Historique non implémenté</p>
+          <p className="text-sm text-gray-600 mt-1">Modifiez le statut avec le menu</p>
         </div>
-        <Table columns={columns} data={[]} />
+        <Table columns={columns} data={rows} />
       </Card>
     </div>
   );
