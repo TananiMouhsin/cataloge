@@ -169,6 +169,12 @@ export async function updateOrderStatus(id_commande: number, statut: 'Pending' |
   return res.json();
 }
 
+export async function fetchAllCarts() {
+  const res = await fetch(`${API_URL}/admin/carts`, { headers: { ...authHeaders() } });
+  if (!res.ok) throw new Error('Failed to load carts');
+  return res.json();
+}
+
 export type ApiOrder = {
   id_users: number;
   items: { id_produit: number; quantite: number; prix: number }[];

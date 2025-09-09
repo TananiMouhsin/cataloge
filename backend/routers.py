@@ -345,3 +345,28 @@ def update_order_status(
     )
 
 
+@router.get("/admin/carts", response_model=list[schemas.CartOut])
+def admin_list_carts(
+    credentials: HTTPAuthorizationCredentials = Depends(auth_scheme),
+    db: Session = Depends(get_db),
+):
+    payload = _require_auth(credentials)
+    _require_admin(payload)
+    carts = db.query(models.Panier).all()
+    results: list[schemas.CartOut] = []
+    for cart in carts:
+        items = (
+            db.query(models.Stocker)
+            .filter(models.Stocker.id_panier == cart.id_panier)
+            .all()
+        )
+        results.append(
+            schemas.CartOut(
+                id_panier=cart.id_panier,
+                id_users=cart.id_users,
+                items=[schemas.CartItemOut(id_produit=i.id_produit, quantite=i.quantite_stock or 0) for i in items],
+            )
+        )
+    return results
+
+
