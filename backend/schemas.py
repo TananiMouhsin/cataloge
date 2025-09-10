@@ -130,12 +130,14 @@ class CartAddItem(BaseModel):
 class CartItemOut(BaseModel):
     id_produit: int
     quantite: int
+    date_mise_a_jour: Optional[datetime] = None
 
 
 class CartOut(BaseModel):
     id_panier: int
     id_users: int
     items: list[CartItemOut]
+    date_creation: Optional[datetime] = None
 
 
 class OrderItemOut(BaseModel):

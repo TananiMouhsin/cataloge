@@ -74,3 +74,4 @@ CREATE TABLE `stocker` (
 SET FOREIGN_KEY_CHECKS = 1;
 
 
+

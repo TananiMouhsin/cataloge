@@ -7,16 +7,19 @@ import Table from '../../components/admin/UI/Table';
 import CategoryForm from '../../components/admin/Forms/CategoryForm';
 import BrandForm from '../../components/admin/Forms/BrandForm';
 import { AdminCategory, AdminBrand } from '../../types';
-import { fetchCategories, fetchBrands, createCategory, updateCategory, deleteCategory, createBrand, updateBrand, deleteBrand } from '../../lib/api';
+import { fetchCategories, fetchBrands, fetchProducts, createCategory, updateCategory, deleteCategory, createBrand, updateBrand, deleteBrand } from '../../lib/api';
+import type { ApiProduct } from '../../lib/api';
 
 const CategoriesAndBrands: React.FC = () => {
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [brands, setBrands] = useState<AdminBrand[]>([]);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
   useEffect(() => {
     (async () => {
-      const [cats, brs] = await Promise.all([fetchCategories(), fetchBrands()]);
+      const [cats, brs, prods] = await Promise.all([fetchCategories(), fetchBrands(), fetchProducts()]);
       setCategories(cats as unknown as AdminCategory[]);
       setBrands(brs as unknown as AdminBrand[]);
+      setProducts(prods);
     })();
   }, []);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -85,7 +88,7 @@ const CategoriesAndBrands: React.FC = () => {
   const categoryColumns = [
     { key: 'id_categorie', label: 'ID' },
     { key: 'nom', label: 'Nom' },
-    { key: 'productCount', label: 'Produits', render: () => Math.floor(Math.random() * 20) + 1 },
+    { key: 'productCount', label: 'Produits', render: (v: any, row: AdminCategory) => products.filter(p => p.id_categorie === (row as any).id_categorie).length },
     {
       key: 'actions',
       label: 'Actions',
@@ -113,7 +116,7 @@ const CategoriesAndBrands: React.FC = () => {
   const brandColumns = [
     { key: 'id_marque', label: 'ID' },
     { key: 'nom', label: 'Nom' },
-    { key: 'productCount', label: 'Produits', render: () => Math.floor(Math.random() * 15) + 1 },
+    { key: 'productCount', label: 'Produits', render: (v: any, row: AdminBrand) => products.filter(p => p.id_marque === (row as any).id_marque).length },
     {
       key: 'actions',
       label: 'Actions',
@@ -185,8 +188,8 @@ const CategoriesAndBrands: React.FC = () => {
               <Package className="w-6 h-6 text-accent" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Produits Associés</p>
-              <p className="text-2xl font-semibold text-gray-900">{categories.length + brands.length}</p>
+              <p className="text-sm font-medium text-gray-600">Produits</p>
+              <p className="text-2xl font-semibold text-gray-900">{products.length}</p>
             </div>
           </div>
         </Card>

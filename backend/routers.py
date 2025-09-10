@@ -4,6 +4,7 @@ from .database import get_db
 from . import models, schemas, security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
+from datetime import datetime
 
 
 auth_scheme = HTTPBearer(auto_error=False)
@@ -184,7 +185,7 @@ def cart_add(
     user_id = int(payload["sub"]) if isinstance(payload.get("sub"), str) else payload.get("sub")
     cart = db.query(models.Panier).filter(models.Panier.id_users == user_id).first()
     if not cart:
-        cart = models.Panier(id_users=user_id)
+        cart = models.Panier(id_users=user_id, date_creation=datetime.utcnow())
         db.add(cart)
         db.commit()
         db.refresh(cart)
@@ -198,11 +199,13 @@ def cart_add(
     )
     if stock:
         stock.quantite_stock = (stock.quantite_stock or 0) + max(1, item.quantite)
+        stock.date_mise_a_jour = datetime.utcnow()
     else:
         stock = models.Stocker(
             id_panier=cart.id_panier,
             id_produit=item.id_produit,
             quantite_stock=max(1, item.quantite),
+            date_mise_a_jour=datetime.utcnow(),
         )
         db.add(stock)
     db.commit()
@@ -229,12 +232,35 @@ def get_cart(
         id_users=user_id,
         items=[
             schemas.CartItemOut(
-                id_produit=i.id_produit, quantite=i.quantite_stock or 0
+                id_produit=i.id_produit,
+                quantite=i.quantite_stock or 0,
+                date_mise_a_jour=i.date_mise_a_jour,
             )
             for i in items
         ],
+        date_creation=cart.date_creation,
     )
 
+
+@router.post("/cart/clear")
+def clear_cart(
+    credentials: HTTPAuthorizationCredentials = Depends(auth_scheme),
+    db: Session = Depends(get_db),
+):
+    payload = _require_auth(credentials)
+    user_id = int(payload["sub"]) if isinstance(payload.get("sub"), str) else payload.get("sub")
+    cart = db.query(models.Panier).filter(models.Panier.id_users == user_id).first()
+    if not cart:
+        return {"ok": True}
+    items = (
+        db.query(models.Stocker)
+        .filter(models.Stocker.id_panier == cart.id_panier)
+        .all()
+    )
+    for it in items:
+        db.delete(it)
+    db.commit()
+    return {"ok": True}
 
 @router.post("/orders", response_model=schemas.OrderOut)
 def create_order(
@@ -277,9 +303,14 @@ def create_order(
             quantite=oi.quantite,
             prix_unitaire=oi.prix,
             statut=models.OrderStatus.pending,
+            date_commande=datetime.utcnow(),
         ))
+    # Clear cart items after order creation so client cart is empty
     for it in items:
-        db.delete(it)
+        try:
+            db.delete(it)
+        except Exception:
+            pass
     db.commit()
     return schemas.OrderOut(id_users=user_id, items=order_items, prix_total=total)
 
@@ -364,7 +395,15 @@ def admin_list_carts(
             schemas.CartOut(
                 id_panier=cart.id_panier,
                 id_users=cart.id_users,
-                items=[schemas.CartItemOut(id_produit=i.id_produit, quantite=i.quantite_stock or 0) for i in items],
+                items=[
+                    schemas.CartItemOut(
+                        id_produit=i.id_produit,
+                        quantite=i.quantite_stock or 0,
+                        date_mise_a_jour=i.date_mise_a_jour,
+                    )
+                    for i in items
+                ],
+                date_creation=cart.date_creation,
             )
         )
     return results

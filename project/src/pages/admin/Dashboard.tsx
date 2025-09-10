@@ -7,7 +7,7 @@ import Card from '../../components/admin/UI/Card';
 import Table from '../../components/admin/UI/Table';
 import Modal from '../../components/admin/UI/Modal';
 import { AdminOrder } from '../../types';
-import { fetchProducts, fetchCategories, fetchBrands } from '../../lib/api';
+import { fetchProducts, fetchCategories, fetchBrands, fetchOrders } from '../../lib/api';
 import type { ApiProduct, ApiCategory, ApiBrand } from '../../lib/api';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -18,6 +18,7 @@ const Dashboard: React.FC = () => {
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -29,19 +30,35 @@ const Dashboard: React.FC = () => {
       setProducts(prods);
       setCategories(cats);
       setBrands(brs);
+      try {
+        const ords = await fetchOrders();
+        setOrders(ords);
+      } catch {}
     })();
   }, []);
 
   const lowStockProducts = useMemo(() => products.filter(p => p.stock < 10), [products]);
 
-  const monthlyOrders = {
-    January: 8,
-    February: 4,
-    March: 12,
-    April: 7,
-    May: 15,
-    June: 9,
-  };
+  const totalRevenue = orders.reduce((sum, r) => sum + (r.prix_unitaire || 0) * (r.quantite || 0), 0);
+  const totalOrders = orders.length;
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const ordersThisMonth = orders.filter((o) => {
+    const d = o.date_commande ? new Date(o.date_commande) : null;
+    return d && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).length;
+  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+  const monthsFr = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const monthlyCounts: Record<string, number> = {};
+  monthsFr.forEach((m) => (monthlyCounts[m] = 0));
+  orders.forEach((o) => {
+    if (!o.date_commande) return;
+    const d = new Date(o.date_commande);
+    const key = monthsFr[d.getMonth()];
+    monthlyCounts[key] = (monthlyCounts[key] || 0) + 1;
+  });
 
   const categoryDistribution = categories.map(category => ({
     name: category.nom,
@@ -54,50 +71,39 @@ const Dashboard: React.FC = () => {
   };
 
   const orderColumns = [
-    { key: 'id_commande', label: 'Order ID' },
+    { key: 'id_commande', label: 'ID Commande' },
     { 
-      key: 'date_creation', 
+      key: 'date_commande', 
       label: 'Date',
-      render: (value: string) => new Date(value).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: '2-digit', 
-        year: 'numeric' 
-      })
+      render: (value: string) => value ? new Date(value).toLocaleDateString('fr-FR', { 
+        year: 'numeric', month: 'long', day: 'numeric'
+      }) : '-'
     },
     { 
-      key: 'prix_total', 
-      label: 'Total',
-      render: (value: number) => `$${value.toFixed(2)}`
+      key: 'prix_unitaire', 
+      label: 'Prix Unitaire',
+      render: (_: any, row: any) => `€${(row.prix_unitaire || 0).toFixed(2)}`
+    },
+    { 
+      key: 'quantite', 
+      label: 'Quantité',
     },
     { 
       key: 'statut', 
-      label: 'Status',
+      label: 'Statut',
       render: (value: string) => (
         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
           value === 'Completed' ? 'bg-green-100 text-green-800' :
           value === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
           'bg-red-100 text-red-800'
         }`}>
-          {value}
+          {value === 'Completed' ? 'Terminée' : value === 'Pending' ? 'En attente' : 'Annulée'}
         </span>
       )
     },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (_: any, order: AdminOrder) => (
-        <button
-          onClick={() => handleViewOrderDetails(order)}
-          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
-        >
-          <Eye size={16} />
-        </button>
-      ),
-    },
   ];
 
-  // Placeholder orders until orders API exists
-  const recentOrders: AdminOrder[] = [];
+  const recentOrders = orders.slice(0, 8);
 
   const pieChartData = {
     labels: categoryDistribution.map(c => c.name),
@@ -118,11 +124,11 @@ const Dashboard: React.FC = () => {
   };
 
   const barChartData = {
-    labels: Object.keys(monthlyOrders),
+    labels: monthsFr,
     datasets: [
       {
-        label: 'Orders',
-        data: Object.values(monthlyOrders),
+        label: 'Commandes',
+        data: monthsFr.map((m) => monthlyCounts[m] || 0),
         backgroundColor: '#3B82F6',
         borderColor: '#2563EB',
         borderWidth: 1,
@@ -144,54 +150,54 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your store.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Tableau de bord</h1>
+        <p className="text-gray-600 mt-1">Bienvenue ! Voici l'activité de votre boutique.</p>
       </div>
 
-      {/* Key Metrics */}
+      {/* Indicateurs clés */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-        <StatCard title="Categories" value={categories.length} icon={Tags} color="blue" />
-        <StatCard title="Brands" value={brands.length} icon={Building} color="green" />
-        <StatCard title="Products" value={products.length} icon={Package} color="purple" />
-        <StatCard title="Users" value={0} icon={Users} color="yellow" />
-        <StatCard title="Orders" value={0} icon={ShoppingCart} color="red" />
-        <StatCard title="Revenue" value={`$${(0).toFixed(2)}`} icon={DollarSign} color="green" trend={{ value: 0, isPositive: true }} />
+        <StatCard title="Catégories" value={categories.length} icon={Tags} color="blue" />
+        <StatCard title="Marques" value={brands.length} icon={Building} color="green" />
+        <StatCard title="Produits" value={products.length} icon={Package} color="purple" />
+        <StatCard title="Utilisateurs" value={0} icon={Users} color="yellow" />
+        <StatCard title="Commandes" value={totalOrders} icon={ShoppingCart} color="red" />
+        <StatCard title="Revenu" value={`€${totalRevenue.toFixed(2)}`} icon={DollarSign} color="green" trend={{ value: 0, isPositive: true }} />
       </div>
 
-      {/* Analytics Charts */}
+      {/* Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="Category Distribution">
+        <Card title="Répartition par catégorie">
           <div className="h-64 flex items-center justify-center">
             <Pie data={pieChartData} options={chartOptions} />
           </div>
         </Card>
-        <Card title="Orders per Month">
+        <Card title="Commandes par mois">
           <div className="h-64">
             <Bar data={barChartData} options={chartOptions} />
           </div>
         </Card>
       </div>
 
-      {/* Additional Metrics */}
+      {/* Autres métriques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Revenue" value={`$${(0).toFixed(2)}`} icon={DollarSign} color="green" trend={{ value: 0, isPositive: true }} />
-        <StatCard title="Orders This Month" value={monthlyOrders.June} icon={Package} color="blue" trend={{ value: 8.2, isPositive: true }} />
-        <StatCard title="Low Stock Items" value={lowStockProducts.length} icon={AlertTriangle} color="yellow" />
-        <StatCard title="Avg. Order Value" value={`$${(0).toFixed(2)}`} icon={TrendingUp} color="purple" trend={{ value: 0, isPositive: true }} />
+        <StatCard title="Revenu total" value={`€${totalRevenue.toFixed(2)}`} icon={DollarSign} color="green" trend={{ value: 0, isPositive: true }} />
+        <StatCard title="Commandes ce mois" value={ordersThisMonth} icon={Package} color="blue" trend={{ value: 0, isPositive: true }} />
+        <StatCard title="Produits en rupture" value={lowStockProducts.length} icon={AlertTriangle} color="yellow" />
+        <StatCard title="Prix moyen commande" value={`€${avgOrderValue.toFixed(2)}`} icon={TrendingUp} color="purple" trend={{ value: 0, isPositive: true }} />
       </div>
 
-      {/* Recent Orders and Low Stock Alert */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="Recent Orders">
+      {/* Commandes récentes et alerte stock bas */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card title="Commandes récentes" className="lg:col-span-2">
           <Table
             columns={orderColumns}
             data={recentOrders}
           />
         </Card>
 
-        <Card title="Low Stock Alert">
+        <Card title="Alerte stock bas">
           {lowStockProducts.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">All products are well stocked!</p>
+            <p className="text-gray-500 text-center py-8">Tous les produits ont un stock suffisant.</p>
           ) : (
             <div className="space-y-3 max-h-64 overflow-y-auto">
               {lowStockProducts.map((product) => (
@@ -207,8 +213,8 @@ const Dashboard: React.FC = () => {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-yellow-800">{product.stock} remaining</p>
-                    <p className="text-sm text-gray-600">of {product.stock + 10} total</p>
+                    <p className="font-semibold text-yellow-800">{product.stock} restants</p>
+                    <p className="text-sm text-gray-600">sur {product.stock + 10} au total</p>
                   </div>
                 </div>
               ))}
@@ -217,59 +223,57 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Order Details Modal */}
+      {/* Détails commande */}
       <Modal
         isOpen={showOrderModal}
         onClose={() => setShowOrderModal(false)}
-        title={`Order #${selectedOrder?.id_commande} Details`}
+        title={selectedOrder ? `Commande #${selectedOrder.id_commande}` : 'Commande'}
         size="lg"
       >
         {selectedOrder && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Order ID</label>
+                <label className="block text-sm font-medium text-gray-700">ID Commande</label>
                 <p className="text-gray-900">{selectedOrder.id_commande}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <label className="block text-sm font-medium text-gray-700">Statut</label>
                 <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
                   selectedOrder.statut === 'Completed' ? 'bg-green-100 text-green-800' :
                   selectedOrder.statut === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
                   'bg-red-100 text-red-800'
                 }`}>
-                  {selectedOrder.statut}
+                  {selectedOrder.statut === 'Completed' ? 'Terminée' : selectedOrder.statut === 'Pending' ? 'En attente' : 'Annulée'}
                 </span>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Date</label>
                 <p className="text-gray-900">
-                  {new Date(selectedOrder.date_creation).toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: '2-digit', 
-                    year: 'numeric' 
-                  })}
+                  {selectedOrder.date_creation ? new Date(selectedOrder.date_creation).toLocaleDateString('fr-FR', { 
+                    year: 'numeric', month: 'long', day: 'numeric'
+                  }) : '-'}
                 </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Total</label>
-                <p className="text-gray-900 font-semibold">${selectedOrder.prix_total.toFixed(2)}</p>
+                <p className="text-gray-900 font-semibold">€{selectedOrder.prix_total?.toFixed(2) || '0.00'}</p>
               </div>
             </div>
 
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Products</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Produits</h4>
               <div className="bg-gray-50 rounded-lg p-4">
-                {selectedOrder.produits.map((item, index) => {
+                {selectedOrder.produits?.map((item, index) => {
                   const product = products.find(p => p.id_produit === item.id_produit);
                   return (
                     <div key={index} className="flex justify-between items-center py-2">
                       <div>
-                        <p className="font-medium">{product?.nom || 'Unknown Product'}</p>
-                        <p className="text-sm text-gray-600">Quantity: {item.quantite}</p>
+                        <p className="font-medium">{product?.nom || 'Produit'}</p>
+                        <p className="text-sm text-gray-600">Quantité: {item.quantite}</p>
                       </div>
                       <p className="font-semibold">
-                        ${((product?.prix || 0) * item.quantite).toFixed(2)}
+                        €{((product?.prix || 0) * item.quantite).toFixed(2)}
                       </p>
                     </div>
                   );

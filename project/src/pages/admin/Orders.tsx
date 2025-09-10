@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ShoppingCart, Clock, CheckCircle, XCircle, TrendingUp, DollarSign } from 'lucide-react';
 import Card from '../../components/admin/UI/Card';
 import Table from '../../components/admin/UI/Table';
-import { fetchOrders, createOrder, updateOrderStatus } from '../../lib/api';
+import { fetchOrders, updateOrderStatus } from '../../lib/api';
 
 type UIOrderRow = {
   id_commande: number;
@@ -17,7 +17,6 @@ type UIOrderRow = {
 const Orders: React.FC = () => {
   const [rows, setRows] = useState<UIOrderRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const load = async () => {
@@ -87,20 +86,6 @@ const Orders: React.FC = () => {
     ) },
   ];
 
-  const handleCreateOrder = async () => {
-    setCreating(true);
-    setMessage(null);
-    try {
-      await createOrder();
-      setMessage('Commande créée à partir du panier.');
-      load();
-    } catch (e: any) {
-      setMessage("Impossible de créer la commande. Connectez-vous et vérifiez le panier.");
-    } finally {
-      setCreating(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-primary to-secondary rounded-lg p-6 text-white">
@@ -114,9 +99,7 @@ const Orders: React.FC = () => {
               <p className="text-accent mt-1">Visualiser et gérer les commandes clients</p>
             </div>
           </div>
-          <button onClick={handleCreateOrder} disabled={creating} className="px-4 py-2 bg-white text-primary rounded-lg font-semibold hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50">
-            {creating ? 'Création...' : 'Créer commande depuis panier'}
-          </button>
+          {/* Bouton supprimé */}
         </div>
       </div>
 

@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
-import { addToCart } from '../lib/api';
 
 const Cart: React.FC = () => {
   const { items, total, itemCount, updateQuantity, removeItem, clearCart } = useCart();
@@ -18,11 +17,7 @@ const Cart: React.FC = () => {
 
   const handleCheckout = async () => {
     try {
-      // For each item, ensure it's synced to backend cart
-      for (const it of items) {
-        await addToCart(it.product.id, it.quantity);
-      }
-      // Then call backend order creation
+      // Create order from existing server-side cart (Stocker)
       const res = await fetch(import.meta.env.VITE_API_URL + '/orders', {
         method: 'POST',
         headers: {
@@ -30,7 +25,7 @@ const Cart: React.FC = () => {
         },
       });
       if (!res.ok) throw new Error('Order failed');
-      // Clear local cart after successful order
+      // Clear local cart after successful order (server-side rows are retained for admin view)
       clearCart();
       alert('Commande créée avec succès.');
     } catch (e) {

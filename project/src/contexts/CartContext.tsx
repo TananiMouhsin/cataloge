@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { CartItem, Product } from '../types';
 import { useAuth } from './AuthContext';
+import { addToCart as apiAddToCart, getCart as apiGetCart, clearCart as apiClearCart } from '../lib/api';
 
 interface CartState {
   items: CartItem[];
@@ -102,24 +103,51 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { user } = useAuth();
 
   useEffect(() => {
-    const userId = user?.id;
-    if (!userId) {
-      // No user logged in -> ensure empty cart in memory
-      dispatch({ type: 'LOAD_CART', payload: [] });
-      return;
-    }
-    const key = `cart:${userId}`;
-    const savedCart = localStorage.getItem(key);
-    if (savedCart) {
-      try {
-        const cartItems = JSON.parse(savedCart);
-        dispatch({ type: 'LOAD_CART', payload: cartItems });
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
+    const load = async () => {
+      const userId = user?.id;
+      if (!userId) {
+        dispatch({ type: 'LOAD_CART', payload: [] });
+        return;
       }
-    } else {
-      dispatch({ type: 'LOAD_CART', payload: [] });
-    }
+      try {
+        // Prefer loading cart from server so admin can see it
+        const serverCart = await apiGetCart();
+        const items: CartItem[] = (serverCart.items || []).map((it: { id_produit: number; quantite: number }) => ({
+          product: {
+            id: it.id_produit,
+            name: '',
+            brand: '',
+            category: '',
+            price: 0,
+            images: [],
+            description: '',
+            specifications: {},
+            stock: 0,
+            isNew: false,
+            rating: 0,
+            reviews: [],
+          },
+          quantity: it.quantite,
+        }));
+        dispatch({ type: 'LOAD_CART', payload: items });
+      } catch (e) {
+        // Fallback to local storage if server unavailable
+        const key = `cart:${userId}`;
+        const savedCart = localStorage.getItem(key);
+        if (savedCart) {
+          try {
+            const cartItems = JSON.parse(savedCart);
+            dispatch({ type: 'LOAD_CART', payload: cartItems });
+          } catch (error) {
+            console.error('Error loading cart from localStorage:', error);
+            dispatch({ type: 'LOAD_CART', payload: [] });
+          }
+        } else {
+          dispatch({ type: 'LOAD_CART', payload: [] });
+        }
+      }
+    };
+    load();
   }, [user?.id]);
 
   useEffect(() => {
@@ -130,7 +158,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [state.items, user?.id]);
 
   const addItem = (product: Product) => {
+    // Update UI immediately
     dispatch({ type: 'ADD_ITEM', payload: product });
+    // Persist to backend if logged in
+    if (user?.id) {
+      apiAddToCart(product.id, 1).catch(() => {
+        // Ignore errors to keep UI responsive; could add toast
+      });
+    }
   };
 
   const removeItem = (productId: number) => {
@@ -143,6 +178,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => {
     dispatch({ type: 'CLEAR_CART' });
+    if (user?.id) {
+      apiClearCart().catch(() => {});
+    }
   };
 
   const openCart = () => {

@@ -159,6 +159,15 @@ export async function fetchOrders() {
   return res.json();
 }
 
+export async function clearCart() {
+  const res = await fetch(`${API_URL}/cart/clear`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error('Failed to clear cart');
+  return res.json();
+}
+
 export async function updateOrderStatus(id_commande: number, statut: 'Pending' | 'Completed' | 'Canceled') {
   const res = await fetch(`${API_URL}/orders/${id_commande}/status`, {
     method: 'PUT',

@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Facebook, Twitter, Instagram, Mail, Phone, MapPin, Send } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Mail, Phone, MapPin, Send, Github, Linkedin } from 'lucide-react';
+import { fetchCategories } from '../lib/api';
+import type { ApiCategory } from '../lib/api';
 
 const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const cats = await fetchCategories();
+        setCategories(cats);
+      } catch {
+        setCategories([]);
+      }
+    })();
+  }, []);
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,15 +42,15 @@ const Footer: React.FC = () => {
             <div className="space-y-2">
               <div className="flex items-center text-gray-400">
                 <MapPin className="w-4 h-4 mr-2" />
-                <span className="text-sm">123 Rue Commerce, Paris 75001</span>
+                <span className="text-sm">Taroudant ENSIASD</span>
               </div>
               <div className="flex items-center text-gray-400">
                 <Phone className="w-4 h-4 mr-2" />
-                <span className="text-sm">+33 1 23 45 67 89</span>
+                <span className="text-sm">+212 666666666</span>
               </div>
               <div className="flex items-center text-gray-400">
                 <Mail className="w-4 h-4 mr-2" />
-                <span className="text-sm">contact@catalogue-digital.fr</span>
+                <span className="text-sm">othmanegamghal@gmail.com</span>
               </div>
             </div>
           </div>
@@ -56,13 +70,19 @@ const Footer: React.FC = () => {
                 </li>
               ))}
             </ul>
+            <div className="mt-4">
+              <a href="https://github.com/othmanegamghal" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-gray-400 hover:text-white transition-colors" aria-label="GitHub">
+                <Github className="w-5 h-5 mr-2" />
+                <span>GitHub</span>
+              </a>
+            </div>
           </div>
 
           {/* Categories */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Catégories</h4>
             <ul className="space-y-2">
-              {['Électronique', 'Mode', 'Maison', 'Sports', 'Beauté'].map((category) => (
+              {(categories.length > 0 ? categories.map(c => c.nom) : ['Catégorie'] ).map((category) => (
                 <li key={category}>
                   <a
                     href="#"
@@ -108,6 +128,8 @@ const Footer: React.FC = () => {
                 { icon: Facebook, href: '#' },
                 { icon: Twitter, href: '#' },
                 { icon: Instagram, href: '#' },
+                { icon: Github, href: 'https://github.com/othmanegamghal' },
+                { icon: Linkedin, href: 'https://www.linkedin.com/in/othmane-gamghal-44763026b/' },
               ].map(({ icon: Icon, href }, index) => (
                 <motion.a
                   key={index}

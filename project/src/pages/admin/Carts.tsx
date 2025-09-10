@@ -37,7 +37,7 @@ const Carts: React.FC = () => {
           });
           return {
             id_panier: c.id_panier,
-            date_creation: new Date().toISOString(),
+            date_creation: c.date_creation || new Date().toISOString(),
             products: mappedProducts,
           } as any;
         });
