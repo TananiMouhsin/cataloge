@@ -18,6 +18,7 @@ import AdminCategoriesAndBrands from './pages/admin/CategoriesAndBrands';
 import AdminProducts from './pages/admin/Products';
 import AdminOrders from './pages/admin/Orders';
 import AdminCarts from './pages/admin/Carts';
+import MyCarts from './pages/MyCarts';
 
 function AppContent() {
   const location = useLocation();
@@ -52,6 +53,7 @@ function AppContent() {
           <Route path="/catalogue" element={<Catalogue />} />
           <Route path="/produit/:id" element={<Product />} />
           <Route path="/panier" element={<Cart />} />
+          <Route path="/mes-paniers" element={<MyCarts />} />
           <Route path="/login" element={<Login />} />
         </Routes>
       </main>

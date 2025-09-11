@@ -3,9 +3,20 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import ProductImage from '../components/ProductImage';
 
 const Cart: React.FC = () => {
-  const { items, total, itemCount, updateQuantity, removeItem, clearCart } = useCart();
+  const { items, total, itemCount, updateQuantity, removeItem, clearCart, createOrderFromCurrentCart } = useCart();
+
+  // Organize items by category
+  const organizedItems = items.reduce((acc, item) => {
+    const category = item.product.category || 'Autres';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(item);
+    return acc;
+  }, {} as Record<string, typeof items>);
 
   const handleQuantityChange = (productId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -17,16 +28,7 @@ const Cart: React.FC = () => {
 
   const handleCheckout = async () => {
     try {
-      // Create order from existing server-side cart (Stocker)
-      const res = await fetch(import.meta.env.VITE_API_URL + '/orders', {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + (localStorage.getItem('token') || ''),
-        },
-      });
-      if (!res.ok) throw new Error('Order failed');
-      // Clear local cart after successful order (server-side rows are retained for admin view)
-      clearCart();
+      await createOrderFromCurrentCart();
       alert('Commande créée avec succès.');
     } catch (e) {
       alert("Échec de la commande. Connectez-vous et réessayez.");
@@ -93,23 +95,35 @@ const Cart: React.FC = () => {
               </button>
             </div>
 
-            {items.map((item, index) => (
-              <motion.div
-                key={item.product.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white p-6 rounded-xl shadow-md"
-              >
+            {Object.entries(organizedItems).map(([category, categoryItems], categoryIndex) => (
+              <div key={category} className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
+                  {category}
+                  <span className="ml-2 text-sm text-gray-500">({categoryItems.length} article{categoryItems.length > 1 ? 's' : ''})</span>
+                </h4>
+                
+                <div className="space-y-4">
+                  {categoryItems.map((item, index) => (
+                    <motion.div
+                      key={item.product.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: (categoryIndex * 0.1) + (index * 0.05) }}
+                      className="bg-white p-6 rounded-xl shadow-md border-l-4 border-l-primary"
+                    >
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link
                     to={`/produit/${item.product.id}`}
                     className="flex-shrink-0"
                   >
-                    <img
-                      src={item.product.images[0]}
-                      alt={item.product.name}
-                      className="w-24 h-24 object-cover rounded-lg hover:opacity-80 transition-opacity"
+                    <ProductImage
+                      productId={item.product.id}
+                      productName={item.product.name}
+                      images={item.product.images}
+                      size="medium"
+                      showGallery={true}
+                      category={item.product.category}
                     />
                   </Link>
 
@@ -166,7 +180,10 @@ const Cart: React.FC = () => {
                     Total: €{(item.product.price * item.quantity).toFixed(2)}
                   </span>
                 </div>
-              </motion.div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
 

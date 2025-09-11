@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingBag, Users, Clock, TrendingUp, Package, DollarSign, AlertTriangle } from 'lucide-react';
+import { ShoppingBag, Users, Clock, TrendingUp, Package, DollarSign, AlertTriangle, User, Calendar, Trash2 } from 'lucide-react';
 import Card from '../../components/admin/UI/Card';
 import Table from '../../components/admin/UI/Table';
 import { AdminCart, AdminProduct } from '../../types';
@@ -10,6 +10,8 @@ const Carts: React.FC = () => {
   const [rows, setRows] = useState<AdminCart[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [groupedCarts, setGroupedCarts] = useState<Record<number, AdminCart[]>>({});
+  const [selectedClient, setSelectedClient] = useState<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -42,6 +44,16 @@ const Carts: React.FC = () => {
           } as any;
         });
         setRows(mappedRows);
+        
+        // Group carts by client
+        const grouped: Record<number, AdminCart[]> = {};
+        mappedRows.forEach(cart => {
+          if (!grouped[cart.id_users]) {
+            grouped[cart.id_users] = [];
+          }
+          grouped[cart.id_users].push(cart);
+        });
+        setGroupedCarts(grouped);
       } catch (e: any) {
         setErrorMsg("Impossible de charger les paniers. Assurez-vous d'être connecté en admin.");
       } finally {
@@ -55,10 +67,22 @@ const Carts: React.FC = () => {
   const totalItems = rows.reduce((sum, cart) => sum + cart.products.reduce((cartSum, item) => cartSum + item.quantity, 0), 0);
   const totalValue = rows.reduce((sum, cart) => sum + cart.products.reduce((cartSum, item) => cartSum + (item.product.prix * item.quantity), 0), 0);
   const avgCartValue = totalCarts > 0 ? totalValue / totalCarts : 0;
+  const uniqueClients = Object.keys(groupedCarts).length;
 
   const columns = [
     { key: 'id_panier', label: 'ID Panier' },
-    { key: 'date_creation', label: 'Date de création', render: (value: string) => new Date(value).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) },
+    { key: 'id_users', label: 'Client', render: (value: number) => (
+      <div className="flex items-center space-x-2">
+        <User className="w-4 h-4 text-gray-400" />
+        <span>Client #{value}</span>
+      </div>
+    ) },
+    { key: 'date_creation', label: 'Date de création', render: (value: string) => (
+      <div className="flex items-center space-x-2">
+        <Calendar className="w-4 h-4 text-gray-400" />
+        <span>{new Date(value).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+    ) },
     { key: 'products', label: 'Produits', render: (value: any, row: AdminCart) => (
       <div className="space-y-1">
         {row.products.map((item, index) => (
@@ -72,7 +96,7 @@ const Carts: React.FC = () => {
     { key: 'total_items', label: 'Total Items', render: (value: any, row: AdminCart) => row.products.reduce((sum, item) => sum + item.quantity, 0) },
     { key: 'total_value', label: 'Valeur Totale', render: (value: any, row: AdminCart) => {
       const total = row.products.reduce((sum, item) => sum + (item.product.prix * item.quantity), 0);
-      return `$${total.toFixed(2)}`;
+      return `€${total.toFixed(2)}`;
     } },
   ];
 
@@ -107,14 +131,14 @@ const Carts: React.FC = () => {
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <Card className="p-6 border-l-4 border-l-secondary">
               <div className="flex items-center">
                 <div className="p-3 bg-secondary/10 rounded-lg">
                   <ShoppingBag className="w-6 h-6 text-secondary" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Paniers</p>
+                  <p className="text-sm font-medium text-gray-600">Total Paniers</p>
                   <p className="text-2xl font-semibold text-gray-900">{totalCarts}</p>
                 </div>
               </div>
@@ -122,7 +146,18 @@ const Carts: React.FC = () => {
             <Card className="p-6 border-l-4 border-l-primary">
               <div className="flex items-center">
                 <div className="p-3 bg-primary/10 rounded-lg">
-                  <Package className="w-6 h-6 text-primary" />
+                  <Users className="w-6 h-6 text-primary" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Clients</p>
+                  <p className="text-2xl font-semibold text-gray-900">{uniqueClients}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-6 border-l-4 border-l-accent">
+              <div className="flex items-center">
+                <div className="p-3 bg-accent/10 rounded-lg">
+                  <Package className="w-6 h-6 text-accent" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Items</p>
@@ -130,25 +165,25 @@ const Carts: React.FC = () => {
                 </div>
               </div>
             </Card>
-            <Card className="p-6 border-l-4 border-l-accent">
+            <Card className="p-6 border-l-4 border-l-green-500">
               <div className="flex items-center">
-                <div className="p-3 bg-accent/10 rounded-lg">
-                  <DollarSign className="w-6 h-6 text-accent" />
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <DollarSign className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Valeur Totale</p>
-                  <p className="text-2xl font-semibold text-gray-900">${totalValue.toFixed(2)}</p>
+                  <p className="text-2xl font-semibold text-gray-900">€{totalValue.toFixed(2)}</p>
                 </div>
               </div>
             </Card>
-            <Card className="p-6 border-l-4 border-l-secondary">
+            <Card className="p-6 border-l-4 border-l-purple-500">
               <div className="flex items-center">
-                <div className="p-3 bg-secondary/10 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-secondary" />
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <TrendingUp className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Valeur Moyenne</p>
-                  <p className="text-2xl font-semibold text-gray-900">${avgCartValue.toFixed(2)}</p>
+                  <p className="text-2xl font-semibold text-gray-900">€{avgCartValue.toFixed(2)}</p>
                 </div>
               </div>
             </Card>

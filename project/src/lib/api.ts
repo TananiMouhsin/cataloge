@@ -154,8 +154,15 @@ export async function createOrder() {
 }
 
 export async function fetchOrders() {
-  const res = await fetch(`${API_URL}/orders`, { headers: { ...authHeaders() } });
+  // Use public endpoint to ensure orders display even without admin auth during setup
+  const res = await fetch(`${API_URL}/orders-all`);
   if (!res.ok) throw new Error('Failed to load orders');
+  return res.json();
+}
+
+export async function fetchOrdersDebugSample() {
+  const res = await fetch(`${API_URL}/debug/orders-sample`);
+  if (!res.ok) throw new Error('Failed to load orders sample');
   return res.json();
 }
 
@@ -165,6 +172,75 @@ export async function clearCart() {
     headers: { ...authHeaders() },
   });
   if (!res.ok) throw new Error('Failed to clear cart');
+  return res.json();
+}
+
+export async function getUserCarts() {
+  const res = await fetch(`${API_URL}/carts`, { headers: { ...authHeaders() } });
+  if (!res.ok) throw new Error('Failed to load carts');
+  return res.json();
+}
+
+export async function createNewCart() {
+  const res = await fetch(`${API_URL}/cart/new`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error('Failed to create cart');
+  return res.json();
+}
+
+export async function deleteCart(cartId: number) {
+  const res = await fetch(`${API_URL}/cart/${cartId}`, {
+    method: 'DELETE',
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error('Failed to delete cart');
+  return res.json();
+}
+
+// Specific cart operations
+export async function getSpecificCart(cartId: number) {
+  const res = await fetch(`${API_URL}/cart/${cartId}`, { headers: { ...authHeaders() } });
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`Failed to load cart ${cartId}:`, res.status, errorText);
+    if (res.status === 401) {
+      throw new Error('Non autorisé - veuillez vous reconnecter');
+    } else if (res.status === 404) {
+      throw new Error('Panier non trouvé');
+    } else {
+      throw new Error(`Erreur serveur: ${res.status}`);
+    }
+  }
+  return res.json();
+}
+
+export async function addToSpecificCart(cartId: number, id_produit: number, quantite = 1) {
+  const res = await fetch(`${API_URL}/cart/${cartId}/add`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ id_produit, quantite }),
+  });
+  if (!res.ok) throw new Error('Failed to add to cart');
+  return res.json();
+}
+
+export async function clearSpecificCart(cartId: number) {
+  const res = await fetch(`${API_URL}/cart/${cartId}/clear`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error('Failed to clear cart');
+  return res.json();
+}
+
+export async function createOrderFromCart(cartId: number) {
+  const res = await fetch(`${API_URL}/cart/${cartId}/order`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error('Failed to create order');
   return res.json();
 }
 

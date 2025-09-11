@@ -4,6 +4,7 @@ import { ShoppingCart, Star, Package, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Product } from '../types';
 import { useCart } from '../contexts/CartContext';
+import ProductImage from './ProductImage';
 
 interface ProductCardProps {
   product: Product;
@@ -31,14 +32,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border border-white/20 hover:scale-105"
+      className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border border-white/20 hover:scale-105 h-96 flex flex-col"
     >
       <Link to={`/produit/${product.id}`}>
-        <div className="relative overflow-hidden">
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-700"
+        <div className="relative overflow-hidden h-64">
+          <ProductImage
+            productId={product.id}
+            productName={product.name}
+            images={product.images}
+            size="large"
+            showGallery={true}
+            category={product.category}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
           />
           
           {/* Badges */}
@@ -94,14 +99,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 flex-1 flex flex-col">
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1">
               <h3 className="font-semibold text-gray-800 line-clamp-2 group-hover:text-primary transition-all duration-300 text-lg">
                 {product.name}
               </h3>
-              <p className="text-sm text-gray-600 mt-2 font-medium">{product.brand}</p>
-              <span className="inline-block mt-2 px-3 py-1 bg-gradient-to-r from-accent to-purple-600 text-white text-xs rounded-full font-medium">
+              <p className="text-sm text-gray-600 mt-1 font-medium">{product.brand}</p>
+              <span className="inline-block mt-1 px-2 py-1 bg-gradient-to-r from-accent to-purple-600 text-white text-xs rounded-full font-medium">
                 {product.category}
               </span>
             </div>
@@ -125,7 +130,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
           </div>
 
           {/* Price */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mt-auto">
             <div className="flex items-center space-x-2">
               <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 €{product.price}

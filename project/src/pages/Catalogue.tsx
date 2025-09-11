@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Search, Filter, SortAsc, SortDesc, Grid, List, Sparkles, TrendingUp, Loader2 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import Notification from '../components/Notification';
+import ProductImage from '../components/ProductImage';
 import { fetchProducts, fetchCategories, fetchBrands, ApiProduct, ApiCategory, ApiBrand } from '../lib/api';
 import { Product } from '../types';
 
@@ -16,6 +17,7 @@ const Catalogue: React.FC = () => {
   const [showNew, setShowNew] = useState(false);
   const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'newest' | 'popularity'>('popularity');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [organizationMode, setOrganizationMode] = useState<'normal' | 'category'>('normal');
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,6 +95,20 @@ const Catalogue: React.FC = () => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredProducts, currentPage]);
+
+  // Organize products by category for better visual organization
+  const organizedProductsByCategory = useMemo(() => {
+    const organized = filteredProducts.reduce((acc, product) => {
+      const category = product.categorie?.nom || 'Autres';
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(product);
+      return acc;
+    }, {} as Record<string, ApiProduct[]>);
+
+    return organized;
+  }, [filteredProducts]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
 
@@ -325,6 +341,30 @@ const Catalogue: React.FC = () => {
                   <option value="newest">Nouveautés</option>
                 </select>
 
+                {/* Organization Mode */}
+                <div className="hidden sm:flex bg-gray-100 rounded-xl p-1">
+                  <button
+                    onClick={() => setOrganizationMode('normal')}
+                    className={`px-3 py-2 rounded-lg transition-all duration-300 text-sm font-medium ${
+                      organizationMode === 'normal' 
+                        ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg' 
+                        : 'text-gray-600 hover:text-primary'
+                    }`}
+                  >
+                    Normal
+                  </button>
+                  <button
+                    onClick={() => setOrganizationMode('category')}
+                    className={`px-3 py-2 rounded-lg transition-all duration-300 text-sm font-medium ${
+                      organizationMode === 'category' 
+                        ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg' 
+                        : 'text-gray-600 hover:text-primary'
+                    }`}
+                  >
+                    Par catégorie
+                  </button>
+                </div>
+
                 {/* View Mode */}
                 <div className="hidden sm:flex bg-gray-100 rounded-xl p-1">
                   <button
@@ -361,21 +401,25 @@ const Catalogue: React.FC = () => {
               </div>
             ) : paginatedProducts.length > 0 ? (
               <>
+                {organizationMode === 'normal' ? (
                 <motion.div
                   className={`grid gap-6 ${
                     viewMode === 'grid' 
-                      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3'
+                      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                       : 'grid-cols-1'
                   }`}
                 >
-                  {paginatedProducts.map((product, index) => {
+                    {paginatedProducts.map((product, index) => {
+                    // Use real product images or empty array for fallback
+                    const productImages = product.qr_code_path ? [product.qr_code_path] : [];
+
                     // Convert API product to frontend Product format
                     const frontendProduct: Product = {
                       id: product.id_produit,
                       name: product.nom,
                       description: product.description || '',
                       price: product.prix,
-                      images: [product.qr_code_path || '/placeholder-product.jpg'],
+                      images: productImages,
                       category: product.categorie?.nom || 'Inconnu',
                       brand: product.marque?.nom || 'Inconnu',
                       rating: 4.5,
@@ -395,8 +439,69 @@ const Catalogue: React.FC = () => {
                         }}
                       />
                     );
-                  })}
-                </motion.div>
+                    })}
+                  </motion.div>
+                ) : (
+                  <div className="space-y-12">
+                    {Object.entries(organizedProductsByCategory).map(([category, categoryProducts], categoryIndex) => (
+                      <motion.div
+                        key={category}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: categoryIndex * 0.1 }}
+                        className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20"
+                      >
+                        <div className="flex items-center justify-between mb-8">
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-gradient-to-r from-primary to-secondary rounded-full mr-3"></div>
+                            <h3 className="text-2xl font-bold text-gray-800">{category}</h3>
+                            <span className="ml-3 text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                              {categoryProducts.length} produit{categoryProducts.length > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className={`grid gap-6 ${
+                          viewMode === 'grid' 
+                            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                            : 'grid-cols-1'
+                        }`}>
+                          {categoryProducts.map((product, index) => {
+                            // Use real product images or empty array for fallback
+                            const productImages = product.qr_code_path ? [product.qr_code_path] : [];
+
+                            // Convert API product to frontend Product format
+                            const frontendProduct: Product = {
+                              id: product.id_produit,
+                              name: product.nom,
+                              description: product.description || '',
+                              price: product.prix,
+                              images: productImages,
+                              category: product.categorie?.nom || 'Inconnu',
+                              brand: product.marque?.nom || 'Inconnu',
+                              rating: 4.5,
+                              isNew: false,
+                              stock: product.stock,
+                              specifications: {},
+                              reviews: []
+                            };
+
+                            return (
+                              <ProductCard 
+                                key={product.id_produit} 
+                                product={frontendProduct} 
+                                index={index}
+                                onAddToCart={(productName) => {
+                                  showNotification(`${productName} ajouté au panier !`, 'success');
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (

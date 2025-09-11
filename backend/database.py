@@ -4,7 +4,12 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
 
+# Load environment from .env first, then fallback to env_config.txt if present
 load_dotenv()
+try:
+    load_dotenv(dotenv_path=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'env_config.txt')), override=False)
+except Exception:
+    pass
 
 
 def _build_db_url() -> str:

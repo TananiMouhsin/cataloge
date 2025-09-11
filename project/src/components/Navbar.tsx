@@ -17,6 +17,10 @@ const Navbar: React.FC = () => {
     { path: '/catalogue', label: 'Catalogue' },
   ];
 
+  const userNavItems = [
+    { path: '/mes-paniers', label: 'Mes Paniers' },
+  ];
+
   const isActive = (path: string) => location.pathname === path;
 
   return (
@@ -58,6 +62,19 @@ const Navbar: React.FC = () => {
               {user ? (
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-gray-600">Bonjour, {user.name}</span>
+                  {userNavItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`text-sm font-medium transition-colors ${
+                        isActive(item.path)
+                          ? 'text-primary'
+                          : 'text-gray-600 hover:text-primary'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
                   {isAdmin && (
                     <Link
                       to="/admin"
