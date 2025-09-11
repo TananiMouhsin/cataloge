@@ -312,6 +312,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const switchToCart = async (cartId: number) => {
     try {
+      // No-op if already current
+      if (state.currentCartId === cartId) {
+        return;
+      }
       console.log('Switching to cart:', cartId);
       console.log('User ID:', user?.id);
       console.log('Auth token:', localStorage.getItem('token'));

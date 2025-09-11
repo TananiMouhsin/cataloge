@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Trash2, ShoppingBag, Calendar, Package, ArrowRight, User, DollarSign, Clock, Edit3 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
@@ -17,6 +17,7 @@ interface CartData {
 }
 
 const MyCarts: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { allCarts, currentCartId, switchToCart, createNewCart, deleteCart, loadAllCarts } = useCart();
   const [loading, setLoading] = useState(true);
@@ -260,7 +261,7 @@ const MyCarts: React.FC = () => {
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             <p className="mt-4 text-gray-600">Chargement de vos paniers...</p>
           </div>
-        ) : carts.length === 0 ? (
+        ) : allCarts.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -388,6 +389,14 @@ const MyCarts: React.FC = () => {
                     <button
                       className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center justify-center space-x-1"
                       title="Modifier le panier"
+                      onClick={async () => {
+                        try {
+                          await handleSwitchToCart(cart.id_panier);
+                          navigate('/panier');
+                        } catch (e) {
+                          setError('Impossible d\'ouvrir le panier');
+                        }
+                      }}
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
