@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from .database import get_db
 from . import models, schemas, security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from datetime import datetime
+import os
+import uuid
+from fastapi.staticfiles import StaticFiles
 
 
 auth_scheme = HTTPBearer(auto_error=False)
@@ -106,6 +109,32 @@ def create_product(
     db.commit()
     db.refresh(prod)
     return prod
+
+
+@router.post("/upload-image")
+def upload_image(
+    file: UploadFile = File(...),
+    credentials: HTTPAuthorizationCredentials = Depends(auth_scheme),
+):
+    payload = _require_auth(credentials)
+    _require_admin(payload)
+    
+    # Create uploads directory if it doesn't exist
+    upload_dir = "project/public/uploads/images"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Generate unique filename
+    file_extension = os.path.splitext(file.filename)[1] if file.filename else ".jpg"
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+    file_path = os.path.join(upload_dir, unique_filename)
+    
+    # Save file
+    with open(file_path, "wb") as buffer:
+        content = file.file.read()
+        buffer.write(content)
+    
+    # Return the filename (not full path)
+    return {"filename": unique_filename}
 
 
 @router.put("/products/{id_produit}", response_model=schemas.ProduitOut)

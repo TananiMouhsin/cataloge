@@ -1,11 +1,13 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 from .routers import router as api_router
 from .database import engine
 from . import models
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+import os
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -29,6 +31,11 @@ def health():
 
 
 app.include_router(api_router, prefix="")
+
+# Mount static files for uploaded images
+uploads_dir = "project/public/uploads"
+if os.path.exists(uploads_dir):
+    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 
 @app.on_event("startup")

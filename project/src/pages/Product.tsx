@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Star, ShoppingCart, Minus, Plus, Package, Share2, Heart, Sparkles, Truck, Shield, CheckCircle } from 'lucide-react';
 import QRCode from 'qrcode';
 import ProductCard from '../components/ProductCard';
+import ProductImage from '../components/ProductImage';
 import Notification from '../components/Notification';
 import { Product as ProductType } from '../types';
 import { useCart } from '../contexts/CartContext';
@@ -30,12 +31,17 @@ const Product: React.FC = () => {
         const productId = parseInt(id || '0');
         const found = list.find(p => p.id_produit === productId);
         if (found) {
+          // Use real image when valid; otherwise explicit placeholder
+          const productImages = (found.qr_code_path && !found.qr_code_path.startsWith('blob:'))
+            ? [found.qr_code_path]
+            : ['/default-product.svg'];
+
           const mapped: ProductType = {
             id: found.id_produit,
             name: found.nom,
             description: found.description || '',
             price: found.prix,
-            images: [found.qr_code_path || '/placeholder-product.jpg'],
+            images: productImages,
             category: found.categorie?.nom || 'N/A',
             brand: found.marque?.nom || 'N/A',
             rating: 4.5,
@@ -50,20 +56,27 @@ const Product: React.FC = () => {
           const related = list
             .filter(p => p.categorie?.nom === found.categorie?.nom && p.id_produit !== found.id_produit)
             .slice(0, 4)
-            .map(p => ({
-              id: p.id_produit,
-              name: p.nom,
-              description: p.description || '',
-              price: p.prix,
-              images: [p.qr_code_path || '/placeholder-product.jpg'],
-              category: p.categorie?.nom || 'N/A',
-              brand: p.marque?.nom || 'N/A',
-              rating: 4.2,
-              isNew: false,
-              stock: p.stock,
-              specifications: {},
-              reviews: [],
-            }));
+            .map(p => {
+              // Use real image when valid; otherwise explicit placeholder
+              const relatedImages = (p.qr_code_path && !p.qr_code_path.startsWith('blob:'))
+                ? [p.qr_code_path]
+                : ['/default-product.svg'];
+
+              return {
+                id: p.id_produit,
+                name: p.nom,
+                description: p.description || '',
+                price: p.prix,
+                images: relatedImages,
+                category: p.categorie?.nom || 'N/A',
+                brand: p.marque?.nom || 'N/A',
+                rating: 4.2,
+                isNew: false,
+                stock: p.stock,
+                specifications: {},
+                reviews: [],
+              };
+            });
           setRelatedProducts(related);
 
           const productUrl = `${window.location.origin}/produit/${found.id_produit}`;
@@ -180,10 +193,13 @@ const Product: React.FC = () => {
             className="space-y-6"
           >
             <div className="aspect-square bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <img
-                src={product.images[selectedImage]}
-                alt={product.name}
-                className="w-full h-full object-cover"
+              <ProductImage
+                productId={product.id}
+                productName={product.name}
+                images={product.images}
+                size="large"
+                showGallery={false}
+                className="w-full h-full"
               />
             </div>
             {product.images.length > 1 && (
@@ -198,7 +214,14 @@ const Product: React.FC = () => {
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <img src={image} alt={`${product.name} ${index + 1}`} className="w-full h-full object-cover" />
+                    <ProductImage
+                      productId={product.id}
+                      productName={`${product.name} ${index + 1}`}
+                      images={[image]}
+                      size="large"
+                      showGallery={false}
+                      className="w-full h-full"
+                    />
                   </button>
                 ))}
               </div>

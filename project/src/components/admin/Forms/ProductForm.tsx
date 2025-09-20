@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Button from '../UI/Button';
+import ImageUpload from '../../ImageUpload';
 import { AdminProduct, AdminCategory, AdminBrand } from '../../../types';
 
 interface ProductFormProps {
@@ -27,23 +28,32 @@ const ProductForm: React.FC<ProductFormProps> = ({
     id_marque: product?.id_marque || brands[0]?.id_marque || 1,
     qr_code_path: product?.qr_code_path || '',
   });
+  const [uploadedImage, setUploadedImage] = useState<string | undefined>(
+    product?.qr_code_path ? product.qr_code_path : undefined
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // For now, only pass qr_code_path as URL string; file upload would require backend endpoint
-    onSubmit(formData as any);
+    // Use uploaded image filename if available, otherwise use the URL
+    const finalData = {
+      ...formData,
+      qr_code_path: uploadedImage || formData.qr_code_path
+    };
+    onSubmit(finalData as any);
   };
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFile = (file: File | null) => {
-    if (!file) return;
-    // Placeholder: in a real app you would upload and get back a URL
-    // For now, set a local object URL so preview works; keep qr_code_path for backend
-    const localUrl = URL.createObjectURL(file);
-    setFormData(prev => ({ ...prev, qr_code_path: localUrl }));
+  const handleImageUpload = (filename: string) => {
+    setUploadedImage(filename);
+    setFormData(prev => ({ ...prev, qr_code_path: filename }));
+  };
+
+  const handleImageRemove = () => {
+    setUploadedImage(undefined);
+    setFormData(prev => ({ ...prev, qr_code_path: '' }));
   };
 
   return (
@@ -162,35 +172,16 @@ const ProductForm: React.FC<ProductFormProps> = ({
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 mb-1">
-            URL de l'image (optionnel)
-          </label>
-          <input
-            type="url"
-            id="imageUrl"
-            value={formData.qr_code_path}
-            onChange={(e) => handleChange('qr_code_path', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="https://exemple.com/image.jpg"
-          />
-        </div>
-        <div>
-          <label htmlFor="imageFile" className="block text-sm font-medium text-gray-700 mb-1">
-            Importer une image (optionnel)
-          </label>
-          <input
-            type="file"
-            id="imageFile"
-            accept="image/*"
-            onChange={(e) => handleFile(e.target.files ? e.target.files[0] : null)}
-            className="w-full"
-          />
-          {formData.qr_code_path && (
-            <img src={formData.qr_code_path} alt="Aperçu" className="mt-2 h-24 object-cover rounded border" />
-          )}
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Image du produit
+        </label>
+        <ImageUpload
+          onImageUpload={handleImageUpload}
+          onImageRemove={handleImageRemove}
+          currentImage={uploadedImage}
+          className="mb-4"
+        />
       </div>
       
       <div className="flex justify-end space-x-3">

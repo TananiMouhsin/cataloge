@@ -13,7 +13,7 @@ const Catalogue: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedBrand, setSelectedBrand] = useState<string>('');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [showNew, setShowNew] = useState(false);
   const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'newest' | 'popularity'>('popularity');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -120,7 +120,7 @@ const Catalogue: React.FC = () => {
     setSearchQuery('');
     setSelectedCategory('');
     setSelectedBrand('');
-    setPriceRange([0, 2000]);
+    setPriceRange([0, 50000]);
     setShowNew(false);
     setSortBy('popularity');
   };
@@ -263,7 +263,7 @@ const Catalogue: React.FC = () => {
                     <input
                       type="range"
                       min="0"
-                      max="2000"
+                      max="50000"
                       value={priceRange[0]}
                       onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
                       className="w-full h-2 bg-gradient-to-r from-primary to-secondary rounded-lg appearance-none cursor-pointer slider"
@@ -273,7 +273,7 @@ const Catalogue: React.FC = () => {
                     <input
                       type="range"
                       min="0"
-                      max="2000"
+                      max="50000"
                       value={priceRange[1]}
                       onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
                       className="w-full h-2 bg-gradient-to-r from-secondary to-purple-600 rounded-lg appearance-none cursor-pointer slider"
@@ -410,8 +410,10 @@ const Catalogue: React.FC = () => {
                   }`}
                 >
                     {paginatedProducts.map((product, index) => {
-                    // Use real product images or empty array for fallback
-                    const productImages = product.qr_code_path ? [product.qr_code_path] : [];
+                    // Use real image when valid; otherwise explicit placeholder
+                    const productImages = (product.qr_code_path && !product.qr_code_path.startsWith('blob:'))
+                      ? [product.qr_code_path]
+                      : ['/default-product.svg'];
 
                     // Convert API product to frontend Product format
                     const frontendProduct: Product = {
@@ -467,8 +469,10 @@ const Catalogue: React.FC = () => {
                             : 'grid-cols-1'
                         }`}>
                           {categoryProducts.map((product, index) => {
-                            // Use real product images or empty array for fallback
-                            const productImages = product.qr_code_path ? [product.qr_code_path] : [];
+                            // Use real image when valid; otherwise explicit placeholder
+                            const productImages = (product.qr_code_path && !product.qr_code_path.startsWith('blob:'))
+                              ? [product.qr_code_path]
+                              : ['/default-product.svg'];
 
                             // Convert API product to frontend Product format
                             const frontendProduct: Product = {

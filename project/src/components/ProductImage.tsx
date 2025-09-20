@@ -33,7 +33,13 @@ const ProductImage: React.FC<ProductImageProps> = ({
     // Filter out invalid blob URLs persisted from previous sessions
     const valid = (images || []).filter((u) => !!u && !String(u).startsWith('blob:'));
     if (valid.length > 0) {
-      return valid;
+      // If it's a filename (not a full URL), prepend the uploads path
+      return valid.map(img => {
+        if (img.startsWith('http') || img.startsWith('/')) {
+          return img;
+        }
+        return `http://localhost:8000/uploads/images/${img}`;
+      });
     }
     // Only use default image if no real image is provided
     return ['/default-product.svg'];

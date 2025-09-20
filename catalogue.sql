@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1
--- Généré le : jeu. 11 sep. 2025 à 20:06
+-- Généré le : ven. 19 sep. 2025 à 18:36
 -- Version du serveur : 10.4.28-MariaDB
 -- Version de PHP : 8.1.17
 
@@ -66,13 +66,14 @@ CREATE TABLE `commande` (
 --
 
 INSERT INTO `commande` (`id_commande`, `id_users`, `id_produit`, `quantite`, `prix_unitaire`, `date_commande`, `statut`) VALUES
-(28, 11, 49, 1, 100.00, '2025-09-10 21:15:40', 'pending'),
-(29, 11, 50, 2, 50.00, '2025-09-10 21:15:40', 'pending'),
+(28, 11, 49, 1, 100.00, '2025-09-10 21:15:40', 'completed'),
+(29, 11, 50, 2, 50.00, '2025-09-10 21:15:40', 'completed'),
 (30, 4, 49, 1, NULL, '2025-09-11 12:35:36', 'en_attente'),
 (31, 4, 50, 1, NULL, '2025-09-11 12:35:36', 'en_attente'),
-(32, 4, 50, 1, 50.00, '2025-09-11 16:39:25', 'pending'),
+(32, 4, 50, 1, 50.00, '2025-09-11 16:39:25', 'completed'),
 (33, 12, 49, 1, 100.00, '2025-09-11 16:44:43', 'pending'),
-(34, 12, 49, 1, 100.00, '2025-09-11 16:55:57', 'pending');
+(34, 12, 49, 1, 100.00, '2025-09-11 16:55:57', 'pending'),
+(35, 4, 49, 1, 100.00, '2025-09-11 18:44:59', 'pending');
 
 -- --------------------------------------------------------
 
@@ -144,9 +145,11 @@ CREATE TABLE `produit` (
 --
 
 INSERT INTO `produit` (`id_produit`, `id_categorie`, `id_marque`, `nom`, `description`, `prix`, `stock`, `qr_code_path`, `date_creation`, `reste`) VALUES
-(49, 12, 11, 'neymar', 'MEE', 100.00, 8, 'blob:http://localhost:5173/c7fb8968-a1b2-45b6-a1aa-c858b5fe6ad3', '2025-09-10 22:07:26', NULL),
+(49, 12, 11, 'neymar', 'MEE', 100.00, 8, 'blob:http://localhost:5173/ed160daa-155c-4333-a99c-06542e556cf5', '2025-09-10 22:07:26', NULL),
 (50, 12, 8, 'pedri', 'MIDFILDER', 50.00, 7, 'blob:http://localhost:5173/54e7411a-b717-41e6-9344-c2e96db7d045', '2025-09-10 22:08:15', NULL),
-(51, 14, 10, 'GAMGHALINHO', 'LEOOO', 9999.00, 20, 'blob:http://localhost:5173/e6d90fac-62d6-450e-954f-ec56bfbbc711', '2025-09-11 13:54:19', NULL);
+(51, 14, 10, 'GAMGHALINHO', 'LEOOO', 9999.00, 20, 'blob:http://localhost:5173/e6d90fac-62d6-450e-954f-ec56bfbbc711', '2025-09-11 13:54:19', NULL),
+(52, 9, 8, 'hhhh', 'hhhh', 19.00, 7, '', '2025-09-11 18:33:19', NULL),
+(53, 12, 11, 'nike sport', 'the best shoes', 120.00, 200, 'blob:http://localhost:5173/84eca782-e485-4266-abbc-8693bb8fd4c1', '2025-09-11 19:48:32', NULL);
 
 -- --------------------------------------------------------
 
@@ -161,6 +164,13 @@ CREATE TABLE `stocker` (
   `quantite_stock` int(11) DEFAULT NULL,
   `date_mise_a_jour` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `stocker`
+--
+
+INSERT INTO `stocker` (`id_stocker`, `id_panier`, `id_produit`, `quantite_stock`, `date_mise_a_jour`) VALUES
+(41, 23, 49, 1, '2025-09-11 18:42:34');
 
 -- --------------------------------------------------------
 
@@ -261,7 +271,7 @@ ALTER TABLE `categorie`
 -- AUTO_INCREMENT pour la table `commande`
 --
 ALTER TABLE `commande`
-  MODIFY `id_commande` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
+  MODIFY `id_commande` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT pour la table `marque`
@@ -273,19 +283,19 @@ ALTER TABLE `marque`
 -- AUTO_INCREMENT pour la table `panier`
 --
 ALTER TABLE `panier`
-  MODIFY `id_panier` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id_panier` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT pour la table `produit`
 --
 ALTER TABLE `produit`
-  MODIFY `id_produit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
+  MODIFY `id_produit` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 
 --
 -- AUTO_INCREMENT pour la table `stocker`
 --
 ALTER TABLE `stocker`
-  MODIFY `id_stocker` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `id_stocker` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
 -- AUTO_INCREMENT pour la table `utilisateurs`
