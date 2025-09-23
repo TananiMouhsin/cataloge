@@ -166,6 +166,13 @@ export async function fetchOrdersDebugSample() {
   return res.json();
 }
 
+export async function fetchUsersCount(): Promise<number> {
+  const res = await fetch(`${API_URL}/users-count`);
+  if (!res.ok) throw new Error('Failed to load users count');
+  const data = await res.json();
+  return Number(data?.count || 0);
+}
+
 export async function clearCart() {
   const res = await fetch(`${API_URL}/cart/clear`, {
     method: 'POST',

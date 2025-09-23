@@ -7,7 +7,7 @@ import Card from '../../components/admin/UI/Card';
 import Table from '../../components/admin/UI/Table';
 import Modal from '../../components/admin/UI/Modal';
 import { AdminOrder } from '../../types';
-import { fetchProducts, fetchCategories, fetchBrands, fetchOrders } from '../../lib/api';
+import { fetchProducts, fetchCategories, fetchBrands, fetchOrders, fetchUsersCount } from '../../lib/api';
 import type { ApiProduct, ApiCategory, ApiBrand } from '../../lib/api';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -19,6 +19,7 @@ const Dashboard: React.FC = () => {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
+  const [usersCount, setUsersCount] = useState<number>(0);
 
   useEffect(() => {
     (async () => {
@@ -33,6 +34,10 @@ const Dashboard: React.FC = () => {
       try {
         const ords = await fetchOrders();
         setOrders(ords);
+      } catch {}
+      try {
+        const n = await fetchUsersCount();
+        setUsersCount(n);
       } catch {}
     })();
   }, []);
@@ -159,7 +164,7 @@ const Dashboard: React.FC = () => {
         <StatCard title="Catégories" value={categories.length} icon={Tags} color="blue" />
         <StatCard title="Marques" value={brands.length} icon={Building} color="green" />
         <StatCard title="Produits" value={products.length} icon={Package} color="purple" />
-        <StatCard title="Utilisateurs" value={0} icon={Users} color="yellow" />
+        <StatCard title="Utilisateurs" value={usersCount} icon={Users} color="yellow" />
         <StatCard title="Commandes" value={totalOrders} icon={ShoppingCart} color="red" />
         <StatCard title="Revenu" value={`€${totalRevenue.toFixed(2)}`} icon={DollarSign} color="green" trend={{ value: 0, isPositive: true }} />
       </div>

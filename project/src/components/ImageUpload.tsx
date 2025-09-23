@@ -8,11 +8,11 @@ interface ImageUploadProps {
   className?: string;
 }
 
-const ImageUpload: React.FC<ImageUploadProps> = ({
+const ImageUpload: React.FC<ImageUploadProps> = ({ 
   onImageUpload,
   onImageRemove,
   currentImage,
-  className = ''
+  className = '' 
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -50,13 +50,22 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       return;
     }
 
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    if (!token) {
+      alert("Vous devez être connecté pour téléverser une image.");
+      return;
+    }
+    if (role !== 'admin') {
+      alert("Action réservée aux administrateurs.");
+      return;
+    }
+
     setIsUploading(true);
     
     try {
       const formData = new FormData();
       formData.append('file', file);
-
-      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:8000/upload-image', {
         method: 'POST',
         headers: {
@@ -94,7 +103,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           >
             <X className="w-4 h-4" />
           </button>
-        </div>
+      </div>
       ) : (
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
@@ -122,11 +131,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                     ou cliquez pour sélectionner
                   </p>
                 </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
                   id="image-upload"
                 />
                 <label
@@ -138,7 +147,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 </label>
               </>
             )}
-          </div>
+            </div>
         </div>
       )}
     </div>

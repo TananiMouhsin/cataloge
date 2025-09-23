@@ -901,3 +901,23 @@ def debug_orders_sample(db: Session = Depends(get_db)):
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
+
+@router.get("/users-count")
+def users_count(db: Session = Depends(get_db)):
+    """Return total number of registered users.
+
+    Public endpoint to keep the admin dashboard simple even if auth header is missing.
+    """
+    try:
+        total = db.query(models.Utilisateurs).count()
+        return {"count": int(total)}
+    except Exception:
+        # Fallback using raw SQL for varying table name casing
+        try:
+            from sqlalchemy import text
+            row = db.execute(text("SELECT COUNT(*) AS c FROM Utilisateurs")).mappings().first()
+            if not row:
+                row = db.execute(text("SELECT COUNT(*) AS c FROM utilisateurs")).mappings().first()
+            return {"count": int(row["c"]) if row else 0}
+        except Exception:
+            return {"count": 0}
