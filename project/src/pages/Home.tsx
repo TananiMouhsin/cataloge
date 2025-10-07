@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Star, ShoppingBag, Users, Truck, Shield, Send } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { ContactForm, Product } from '../types';
-import { fetchProducts, ApiProduct } from '../lib/api';
+import { fetchProducts, ApiProduct, sendContact } from '../lib/api';
 
 const Home: React.FC = () => {
   const [contactForm, setContactForm] = useState<ContactForm>({
@@ -34,11 +34,17 @@ const Home: React.FC = () => {
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSubmitted(true);
-    setContactForm({ name: '', email: '', message: '' });
-    setIsSubmitting(false);
-    setTimeout(() => setSubmitted(false), 3000);
+    try {
+      await sendContact(contactForm.name, contactForm.email, contactForm.message);
+      setSubmitted(true);
+      setContactForm({ name: '', email: '', message: '' });
+      setTimeout(() => setSubmitted(false), 3000);
+    } catch (e) {
+      // simple feedback; you can enhance with UI later
+      alert('Échec de l\'envoi du message. Réessayez plus tard.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleContactChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

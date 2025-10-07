@@ -4,11 +4,7 @@ import {
   LayoutDashboard,
   Package,
   Tags,
-  Building,
   ShoppingCart,
-  ShoppingBag,
-  BarChart3,
-  Menu,
   X,
   Home,
 } from 'lucide-react';
@@ -20,11 +16,11 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navItems = [
-    { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+    // `end: true` ensures Dashboard is active only on the exact "/admin" path
+    { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
     { to: '/admin/categories-brands', icon: Tags, label: 'Catégories & Marques' },
     { to: '/admin/products', icon: Package, label: 'Produits' },
     { to: '/admin/orders', icon: ShoppingCart, label: 'Commandes' },
-    { to: '/admin/carts', icon: ShoppingBag, label: 'Paniers' },
   ];
 
   return (
@@ -75,6 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.end}
                 className={({ isActive }) =>
                   `flex items-center px-3 py-2 mb-1 text-sm font-medium rounded-lg transition-colors duration-200 ${
                     isActive

@@ -267,6 +267,16 @@ export async function fetchAllCarts() {
   return res.json();
 }
 
+export async function sendContact(name: string, email: string, message: string) {
+  const res = await fetch(`${API_URL}/contact`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, message }),
+  });
+  if (!res.ok) throw new Error('Failed to send contact');
+  return res.json();
+}
+
 export type ApiOrder = {
   id_users: number;
   items: { id_produit: number; quantite: number; prix: number }[];

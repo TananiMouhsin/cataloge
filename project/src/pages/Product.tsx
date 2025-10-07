@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Star, ShoppingCart, Minus, Plus, Package, Share2, Heart, Sparkles, Truck, Shield, CheckCircle } from 'lucide-react';
-import QRCode from 'qrcode';
 import ProductCard from '../components/ProductCard';
 import ProductImage from '../components/ProductImage';
 import Notification from '../components/Notification';
@@ -16,8 +15,7 @@ const Product: React.FC = () => {
   const [product, setProduct] = useState<ProductType | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews'>('description');
-  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  // Tabs and QR code removed for a simpler interface
   const [relatedProducts, setRelatedProducts] = useState<ProductType[]>([]);
   const [allProducts, setAllProducts] = useState<ApiProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,10 +77,7 @@ const Product: React.FC = () => {
             });
           setRelatedProducts(related);
 
-          const productUrl = `${window.location.origin}/produit/${found.id_produit}`;
-          QRCode.toDataURL(productUrl)
-            .then(url => setQrCodeUrl(url))
-            .catch(err => console.error('Error generating QR code:', err));
+          // QR code generation removed
         } else {
           setProduct(null);
         }
@@ -150,6 +145,13 @@ const Product: React.FC = () => {
     openCart();
   };
 
+  const handleBuyNow = () => {
+    // Add one item and take user to cart panel for checkout
+    addItem(product);
+    showNotification(`Achat rapide pour ${product.name}`, 'success');
+    openCart();
+  };
+
   const handleQuantityChange = (delta: number) => {
     const newQuantity = quantity + delta;
     if (newQuantity >= 1 && newQuantity <= product.stock) {
@@ -185,21 +187,21 @@ const Product: React.FC = () => {
         </motion.div>
 
         {/* Main Product Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 xl:gap-16 mb-16">
           {/* Product Images */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="space-y-6"
           >
-            <div className="aspect-square bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="aspect-square bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
               <ProductImage
                 productId={product.id}
                 productName={product.name}
                 images={product.images}
                 size="large"
                 showGallery={false}
-                className="w-full h-full"
+                className="w-full h-full scale-[1.01] hover:scale-105 transition-transform duration-300"
               />
             </div>
             {product.images.length > 1 && (
@@ -232,7 +234,7 @@ const Product: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="space-y-8"
+            className="space-y-8 lg:sticky lg:top-24 self-start"
           >
             {/* Header Info */}
             <div className="space-y-4">
@@ -249,28 +251,31 @@ const Product: React.FC = () => {
                   </button>
                 </div>
               </div>
-              <h1 className="text-4xl font-bold text-gray-900 leading-tight">{product.name}</h1>
-              <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-5 h-5 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                    />
-                  ))}
-                  <span className="ml-2 text-sm text-gray-600">
-                    {product.rating} ({product.reviews.length} avis)
-                  </span>
-                </div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">{product.name}</h1>
+              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center space-x-2">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`w-5 h-5 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                  />
+                ))}
+                <span className="ml-2 text-sm text-gray-600">
+                  {product.rating}
+                </span>
+              </div>
                 <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full font-medium">
                   {product.category}
+                </span>
+                <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full font-medium">
+                  {product.brand}
                 </span>
               </div>
             </div>
 
-            {/* Price Section */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-4">
+            {/* Price and stock */}
+            <div className="space-y-4 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <div className="flex items-center justify-between">
                 <span className="text-4xl font-bold text-gray-900">€{product.price}</span>
                 {product.isNew && (
                   <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium flex items-center">
@@ -279,20 +284,34 @@ const Product: React.FC = () => {
                   </span>
                 )}
               </div>
-              <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg ${
-                product.stock > 10 ? 'bg-green-50 text-green-700' :
-                product.stock > 0 ? 'bg-orange-50 text-orange-700' :
-                'bg-red-50 text-red-700'
-              }`}>
-                <CheckCircle className="w-4 h-4" />
-                <span className="font-medium text-sm">
-                  {product.stock > 0 ? `${product.stock} en stock` : 'Rupture de stock'}
-                </span>
+              <div>
+                <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-lg ${
+                  product.stock > 10 ? 'bg-green-50 text-green-700' :
+                  product.stock > 0 ? 'bg-orange-50 text-orange-700' :
+                  'bg-red-50 text-red-700'
+                }`}>
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="font-medium text-sm">
+                    {product.stock > 0 ? `${product.stock} en stock` : 'Rupture de stock'}
+                  </span>
+                </div>
+                {/* Stock progress */}
+                {product.stock > 0 && (
+                  <div className="mt-3">
+                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-600 rounded-full"
+                        style={{ width: `${Math.min(100, Math.round((product.stock / 20) * 100))}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Disponibilité du stock</p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Add to Cart Section */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-6 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-gray-700 font-medium">Quantité</span>
                 <div className="flex items-center border border-gray-300 rounded-lg bg-white">
@@ -315,96 +334,46 @@ const Product: React.FC = () => {
                 <ShoppingCart className="w-5 h-5" />
                 <span>{product.stock === 0 ? 'Rupture de stock' : 'Ajouter au panier'}</span>
               </motion.button>
+              <button
+                onClick={handleBuyNow}
+                disabled={product.stock === 0}
+                className="w-full border border-blue-600 text-blue-700 px-8 py-4 rounded-lg font-semibold hover:bg-blue-50 transition-colors duration-200 disabled:border-gray-300 disabled:text-gray-400"
+              >
+                Acheter maintenant
+              </button>
             </div>
 
-            {/* QR Code */}
-            {qrCodeUrl && (
-              <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
-                <h3 className="text-sm font-medium text-gray-700 mb-4">QR Code du produit</h3>
-                <div className="bg-white p-3 rounded-lg inline-block border border-gray-200">
-                  <img src={qrCodeUrl} alt="QR Code" className="w-20 h-20" />
+            {/* Benefits */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <Truck className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Livraison rapide</p>
+                  <p className="text-xs text-gray-600">24-72h selon destination</p>
                 </div>
               </div>
-            )}
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <Shield className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Paiement sécurisé</p>
+                  <p className="text-xs text-gray-600">Protection acheteur</p>
+                </div>
+              </div>
+            </div>
+
+            {/* QR Code section removed */}
           </motion.div>
         </div>
 
-        {/* Product Details Tabs */}
+        {/* Product Details - simplified description card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-16 overflow-hidden"
         >
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-8">
-              {[
-                { key: 'description', label: 'Description' },
-                { key: 'specifications', label: 'Caractéristiques' },
-                { key: 'reviews', label: `Avis (${product.reviews.length})` },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key as any)}
-                  className={`py-6 px-2 border-b-2 font-medium text-sm transition-all duration-200 ${
-                    activeTab === tab.key
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
           <div className="p-8">
-            {activeTab === 'description' && (
-              <div className="prose max-w-none">
-                <p className="text-gray-600 leading-relaxed text-lg">{product.description}</p>
-              </div>
-            )}
-
-            {activeTab === 'specifications' && (
-              <div className="space-y-4">
-                {Object.entries(product.specifications).map(([key, value]) => (
-                  <div key={key} className="flex justify-between py-4 border-b border-gray-100 last:border-b-0">
-                    <span className="font-medium text-gray-700">{key}</span>
-                    <span className="text-gray-600">{value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {activeTab === 'reviews' && (
-              <div className="space-y-8">
-                {product.reviews.length > 0 ? (
-                  product.reviews.map((review) => (
-                    <div key={review.id} className="border-b border-gray-100 pb-8 last:border-b-0">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="font-semibold text-gray-900">{review.author}</span>
-                        <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{review.date}</span>
-                      </div>
-                      <div className="flex items-center mb-4">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-gray-600 leading-relaxed">{review.comment}</p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-16">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Star className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <p className="text-gray-500 text-lg">Aucun avis pour ce produit pour le moment.</p>
-                  </div>
-                )}
-              </div>
-            )}
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Description</h3>
+            <p className="text-gray-600 leading-relaxed text-lg">{product.description}</p>
           </div>
         </motion.div>
 

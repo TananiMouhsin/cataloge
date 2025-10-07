@@ -167,3 +167,9 @@ class OrderRowOut(BaseModel):
 class OrderStatusUpdate(BaseModel):
     statut: str  # 'Pending' | 'Completed' | 'Canceled'
 
+
+class ContactMessage(BaseModel):
+    name: str
+    email: EmailStr
+    message: str
+

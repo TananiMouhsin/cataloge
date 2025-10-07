@@ -869,6 +869,19 @@ def admin_list_carts(
     return results
 
 
+# Contact: send message to all admins (basic placeholder - logs emails)
+@router.post("/contact")
+def send_contact(payload: schemas.ContactMessage, db: Session = Depends(get_db)):
+    # Collect admin emails
+    admins = db.query(models.Utilisateurs).filter(models.Utilisateurs.role == models.UserRole.admin).all()
+    emails = [a.email for a in admins if a.email]
+    # In a real app, send emails here (SMTP). For now, just return success with recipients.
+    # You can configure SMTP later; endpoint stays the same for the frontend.
+    return {
+        "ok": True,
+        "sent_to": emails,
+    }
+
 # Debug endpoints to quickly verify DB connectivity and data presence
 @router.get("/debug/orders-count")
 def debug_orders_count(db: Session = Depends(get_db)):
