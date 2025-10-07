@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, SortAsc, SortDesc, Grid, List, Sparkles, TrendingUp, Loader2 } from 'lucide-react';
+import { Search, Filter, Grid, List, Sparkles, TrendingUp, Loader2 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import Notification from '../components/Notification';
-import ProductImage from '../components/ProductImage';
 import { fetchProducts, fetchCategories, fetchBrands, ApiProduct, ApiCategory, ApiBrand } from '../lib/api';
 import { Product } from '../types';
 
-const ITEMS_PER_PAGE = 12;
+// pagination disabled; showing full filtered list
 
 const Catalogue: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,6 +32,25 @@ const Catalogue: React.FC = () => {
     type: 'success',
     isVisible: false,
   });
+
+  // Compute dynamic max price from loaded products
+  const maxPrice = useMemo(() => {
+    if (!products || products.length === 0) return 50000;
+    const nums = products
+      .map(p => Number(p.prix))
+      .filter(n => Number.isFinite(n));
+    const max = nums.length ? Math.max(...nums) : 50000;
+    return Math.max(100, Math.ceil(max));
+  }, [products]);
+
+  // Ensure price range upper bound tracks the data's max price when products load
+  useEffect(() => {
+    setPriceRange(prev => {
+      const lower = Math.max(0, Math.min(prev[0], maxPrice));
+      const upper = maxPrice;
+      return [lower, upper];
+    });
+  }, [maxPrice]);
 
   // Load data from API
   useEffect(() => {
@@ -61,12 +79,16 @@ const Catalogue: React.FC = () => {
     let filtered = products.filter(product => {
       const catName = product.categorie?.nom || '';
       const brandName = product.marque?.nom || '';
-      const matchesSearch = product.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const name = product.nom || '';
+      const priceNum = Number(product.prix);
+      const hasValidPrice = Number.isFinite(priceNum);
+      const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            brandName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            catName.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = !selectedCategory || catName === selectedCategory;
       const matchesBrand = !selectedBrand || brandName === selectedBrand;
-      const matchesPrice = product.prix >= priceRange[0] && product.prix <= priceRange[1];
+      // If price is missing/invalid, don't exclude the product from the list
+      const matchesPrice = hasValidPrice ? (priceNum >= priceRange[0] && priceNum <= priceRange[1]) : true;
       const matchesNew = !showNew;
       return matchesSearch && matchesCategory && matchesBrand && matchesPrice && matchesNew;
     });
@@ -92,9 +114,9 @@ const Catalogue: React.FC = () => {
   }, [searchQuery, selectedCategory, selectedBrand, priceRange, showNew, sortBy, products, categories, brands]);
 
   const paginatedProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredProducts, currentPage]);
+    // Show all filtered products (no pagination slicing)
+    return filteredProducts;
+  }, [filteredProducts]);
 
   // Organize products by category for better visual organization
   const organizedProductsByCategory = useMemo(() => {
@@ -110,7 +132,7 @@ const Catalogue: React.FC = () => {
     return organized;
   }, [filteredProducts]);
 
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const totalPages = 1; // pagination disabled when showing all
 
   useEffect(() => {
     setCurrentPage(1);
@@ -120,7 +142,7 @@ const Catalogue: React.FC = () => {
     setSearchQuery('');
     setSelectedCategory('');
     setSelectedBrand('');
-    setPriceRange([0, 50000]);
+    setPriceRange([0, maxPrice]);
     setShowNew(false);
     setSortBy('popularity');
   };
@@ -162,7 +184,7 @@ const Catalogue: React.FC = () => {
             Notre Catalogue
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Découvrez {isLoading ? '...' : products.length} produits soigneusement sélectionnés pour vous
+            Découvrez {isLoading ? '...' : filteredProducts.length} produits soigneusement sélectionnés pour vous
           </p>
           <div className="flex items-center justify-center mt-4 space-x-4">
             <div className="flex items-center text-sm text-gray-600">
@@ -263,7 +285,7 @@ const Catalogue: React.FC = () => {
                     <input
                       type="range"
                       min="0"
-                      max="50000"
+                      max={maxPrice}
                       value={priceRange[0]}
                       onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
                       className="w-full h-2 bg-gradient-to-r from-primary to-secondary rounded-lg appearance-none cursor-pointer slider"
@@ -273,7 +295,7 @@ const Catalogue: React.FC = () => {
                     <input
                       type="range"
                       min="0"
-                      max="50000"
+                      max={maxPrice}
                       value={priceRange[1]}
                       onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
                       className="w-full h-2 bg-gradient-to-r from-secondary to-purple-600 rounded-lg appearance-none cursor-pointer slider"

@@ -32,7 +32,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border border-white/20 hover:scale-105 h-96 flex flex-col"
+      className="group relative bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border border-white/20 hover:scale-105 h-96 flex flex-col"
     >
       <Link to={`/produit/${product.id}`}>
         <div className="relative overflow-hidden h-64">
@@ -97,6 +97,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
 
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+          {/* Shine effect */}
+          <div className="pointer-events-none absolute inset-0 -skew-x-12 opacity-0 group-hover:opacity-20 transition-opacity duration-700">
+            <div className="absolute top-0 left-[-50%] h-full w-1/2 bg-gradient-to-r from-transparent via-white to-transparent translate-x-[-100%] group-hover:translate-x-[250%] transition-transform duration-700" />
+          </div>
         </div>
 
         <div className="p-4 flex-1 flex flex-col">
@@ -144,6 +149,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
           </div>
         </div>
       </Link>
+
+      {/* Accent bar on hover */}
+      <div className="absolute bottom-0 left-0 h-1 w-0 bg-gradient-to-r from-primary to-secondary group-hover:w-full transition-all duration-500" />
     </motion.div>
   );
 };

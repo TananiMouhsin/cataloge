@@ -21,6 +21,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
   category = ''
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
   
   const sizeClasses = {
     small: 'w-16 h-16',
@@ -59,14 +60,24 @@ const ProductImage: React.FC<ProductImageProps> = ({
   if (showGallery && productImages.length > 1) {
     return (
       <div className={`relative group`}>
+        {/* Image */}
         <img
           src={currentImage}
           alt={productName}
-          className={`${sizeClasses[size]} object-cover rounded-lg transition-opacity ${className}`}
+          className={`${sizeClasses[size]} object-cover rounded-lg transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'} ${className}`}
+          onLoad={() => setIsLoaded(true)}
           onError={(e) => {
             e.currentTarget.src = '/default-product.svg';
+            setIsLoaded(true);
           }}
         />
+
+        {/* Shimmer placeholder while loading */}
+        {!isLoaded && (
+          <div className={`${sizeClasses[size]} absolute inset-0 rounded-lg overflow-hidden`}>
+            <div className="w-full h-full animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+          </div>
+        )}
         
         {/* Navigation arrows */}
         <button
@@ -100,18 +111,28 @@ const ProductImage: React.FC<ProductImageProps> = ({
 
   return (
     <div className={`relative`}>
+      {/* Main image with fade-in */}
       <img
         src={currentImage}
         alt={productName}
-        className={`${sizeClasses[size]} object-cover rounded-lg hover:opacity-80 transition-opacity ${className}`}
+        className={`${sizeClasses[size]} object-cover rounded-lg transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'} ${className}`}
+        onLoad={() => setIsLoaded(true)}
         onError={(e) => {
           e.currentTarget.src = '/default-product.svg';
+          setIsLoaded(true);
         }}
       />
+
+      {/* Shimmer placeholder while loading */}
+      {!isLoaded && (
+        <div className={`${sizeClasses[size]} absolute inset-0 rounded-lg overflow-hidden`}>
+          <div className="w-full h-full animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+        </div>
+      )}
       
       {/* Category badge */}
       {category && (
-        <div className="absolute -top-1 -right-1 bg-primary text-white text-xs px-1.5 py-0.5 rounded-full">
+        <div className="absolute -top-1 -right-1 bg-primary text-white text-xs px-1.5 py-0.5 rounded-full shadow-sm">
           {category.charAt(0).toUpperCase()}
         </div>
       )}

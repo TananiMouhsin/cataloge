@@ -99,7 +99,7 @@ const Home: React.FC = () => {
             <div className="text-center py-12 text-gray-600">Chargement des produits...</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {apiProducts.map((p, index) => {
+              {apiProducts.slice(0, 4).map((p, index) => {
                 const mapped: Product = {
                   id: p.id_produit,
                   name: p.nom,
